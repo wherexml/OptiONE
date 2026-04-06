@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuthStore } from "@/features/auth";
 import { useWorkspaceStore } from "@/features/workspace";
@@ -13,9 +13,7 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import type { User } from "@/shared/types";
 
@@ -48,6 +46,9 @@ function LoginPageContent() {
   const hydrateWorkspace = useWorkspaceStore((s) => s.hydrateWorkspace);
   const searchParams = useSearchParams();
 
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+
   // Already authenticated — redirect to dashboard
   useEffect(() => {
     if (!isLoading && user && !searchParams.get("cli_callback")) {
@@ -55,8 +56,6 @@ function LoginPageContent() {
     }
   }, [isLoading, user, router, searchParams]);
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [existingUser, setExistingUser] = useState<User | null>(null);
@@ -94,8 +93,10 @@ function LoginPageContent() {
     redirectToCliCallback(cliCallback, token, cliState);
   };
 
-  const handleLogin = async (e: React.SyntheticEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const email = emailRef.current?.value ?? "";
+    const password = passwordRef.current?.value ?? "";
     if (!email) {
       setError("Email is required");
       return;
@@ -181,41 +182,44 @@ function LoginPageContent() {
           <CardDescription>Sign in to your account</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
+              <label htmlFor="email" className="text-sm font-medium leading-none">Email</label>
+              <input
+                ref={emailRef}
                 id="email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleLogin(e)}
+                required
+                className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
+              <label htmlFor="password" className="text-sm font-medium leading-none">Password</label>
+              <input
+                ref={passwordRef}
                 id="password"
+                name="password"
                 type="password"
+                autoComplete="current-password"
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleLogin(e)}
+                required
+                className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
               />
             </div>
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
-            <Button
+            <button
+              type="submit"
               disabled={submitting}
-              className="w-full"
-              size="lg"
-              onClick={handleLogin}
+              className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
             >
               {submitting ? "Signing in..." : "Sign in"}
-            </Button>
-          </div>
+            </button>
+          </form>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">

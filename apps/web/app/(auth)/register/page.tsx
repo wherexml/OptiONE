@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuthStore } from "@/features/auth";
 import { useWorkspaceStore } from "@/features/workspace";
@@ -13,10 +13,12 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import Link from "next/link";
+
+const inputClass =
+  "flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
+const btnClass =
+  "inline-flex h-9 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50";
 
 function RegisterPageContent() {
   const router = useRouter();
@@ -26,6 +28,11 @@ function RegisterPageContent() {
   const hydrateWorkspace = useWorkspaceStore((s) => s.hydrateWorkspace);
   const searchParams = useSearchParams();
 
+  const nameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmRef = useRef<HTMLInputElement>(null);
+
   // Already authenticated — redirect to dashboard
   useEffect(() => {
     if (!isLoading && user) {
@@ -33,16 +40,16 @@ function RegisterPageContent() {
     }
   }, [isLoading, user, router]);
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const handleRegister = async (e: React.SyntheticEvent) => {
+  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!name.trim()) {
+    const name = nameRef.current?.value?.trim() ?? "";
+    const email = emailRef.current?.value ?? "";
+    const password = passwordRef.current?.value ?? "";
+    const confirmPassword = confirmRef.current?.value ?? "";
+    if (!name) {
       setError("Name is required");
       return;
     }
@@ -65,7 +72,7 @@ function RegisterPageContent() {
     setError("");
     setSubmitting(true);
     try {
-      await register(name.trim(), email, password);
+      await register(name, email, password);
       const wsList = await api.listWorkspaces();
       await hydrateWorkspace(wsList);
       router.push(searchParams.get("next") || "/issues");
@@ -85,60 +92,70 @@ function RegisterPageContent() {
           <CardDescription>Sign up for Multica</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
+              <label htmlFor="name" className="text-sm font-medium leading-none">Name</label>
+              <input
+                ref={nameRef}
                 id="name"
+                name="name"
                 type="text"
+                autoComplete="name"
                 placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                required
+                className={inputClass}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
+              <label htmlFor="email" className="text-sm font-medium leading-none">Email</label>
+              <input
+                ref={emailRef}
                 id="email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                required
+                className={inputClass}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
+              <label htmlFor="password" className="text-sm font-medium leading-none">Password</label>
+              <input
+                ref={passwordRef}
                 id="password"
+                name="password"
                 type="password"
+                autoComplete="new-password"
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                required
+                className={inputClass}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm Password</Label>
-              <Input
+              <label htmlFor="confirm-password" className="text-sm font-medium leading-none">Confirm Password</label>
+              <input
+                ref={confirmRef}
                 id="confirm-password"
+                name="confirm-password"
                 type="password"
+                autoComplete="new-password"
                 placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleRegister(e)}
+                required
+                className={inputClass}
               />
             </div>
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
-            <Button
+            <button
+              type="submit"
               disabled={submitting}
-              className="w-full"
-              size="lg"
-              onClick={handleRegister}
+              className={btnClass}
             >
               {submitting ? "Creating account..." : "Sign up"}
-            </Button>
-          </div>
+            </button>
+          </form>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">
