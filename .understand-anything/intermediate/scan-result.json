@@ -1,0 +1,10 @@
+{
+  "name": "Multica",
+  "description": "AI-native task management platform that turns coding agents into real teammates. Assign tasks, track progress, compound skills — manage human + agent workforce in one place. Supports Claude Code, Codex, and OpenCode agents.",
+  "languages": ["go", "typescript", "sql"],
+  "frameworks": ["Next.js 16", "React 19", "chi/v5", "gorilla/websocket", "sqlc", "pgx/v5", "Cobra", "Tailwind CSS 4", "shadcn/ui", "Tiptap", "Zustand", "Docker", "Docker Compose", "GitHub Actions", "GoReleaser"],
+  "files": [],
+  "totalFiles": 0,
+  "estimatedComplexity": "large",
+  "importMap": {}
+}

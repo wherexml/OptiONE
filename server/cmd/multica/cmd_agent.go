@@ -17,7 +17,7 @@ import (
 
 var agentCmd = &cobra.Command{
 	Use:   "agent",
-	Short: "Manage agents",
+	Short: "Work with agents",
 }
 
 var agentListCmd = &cobra.Command{
@@ -29,7 +29,7 @@ var agentListCmd = &cobra.Command{
 var agentGetCmd = &cobra.Command{
 	Use:   "get <id>",
 	Short: "Get agent details",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE:  runAgentGet,
 }
 
@@ -42,28 +42,28 @@ var agentCreateCmd = &cobra.Command{
 var agentUpdateCmd = &cobra.Command{
 	Use:   "update <id>",
 	Short: "Update an agent",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE:  runAgentUpdate,
 }
 
 var agentArchiveCmd = &cobra.Command{
 	Use:   "archive <id>",
 	Short: "Archive an agent",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE:  runAgentArchive,
 }
 
 var agentRestoreCmd = &cobra.Command{
 	Use:   "restore <id>",
 	Short: "Restore an archived agent",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE:  runAgentRestore,
 }
 
 var agentTasksCmd = &cobra.Command{
 	Use:   "tasks <id>",
 	Short: "List tasks for an agent",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE:  runAgentTasks,
 }
 
@@ -77,14 +77,14 @@ var agentSkillsCmd = &cobra.Command{
 var agentSkillsListCmd = &cobra.Command{
 	Use:   "list <agent-id>",
 	Short: "List skills assigned to an agent",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE:  runAgentSkillsList,
 }
 
 var agentSkillsSetCmd = &cobra.Command{
 	Use:   "set <agent-id>",
 	Short: "Set skills for an agent (replaces all current assignments)",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE:  runAgentSkillsSet,
 }
 
@@ -206,6 +206,17 @@ func resolveWorkspaceID(cmd *cobra.Command) string {
 	return cfg.WorkspaceID
 }
 
+// requireWorkspaceID resolves the workspace ID and returns an error with
+// actionable instructions if it is empty (e.g. user has multiple workspaces
+// but no default configured).
+func requireWorkspaceID(cmd *cobra.Command) (string, error) {
+	id := resolveWorkspaceID(cmd)
+	if id == "" {
+		return "", fmt.Errorf("workspace_id is required: use --workspace-id flag, set MULTICA_WORKSPACE_ID env, or run 'multica config set workspace_id <id>'")
+	}
+	return id, nil
+}
+
 // ---------------------------------------------------------------------------
 // Agent commands
 // ---------------------------------------------------------------------------
@@ -215,15 +226,18 @@ func runAgentList(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	if client.WorkspaceID == "" {
+		if _, err := requireWorkspaceID(cmd); err != nil {
+			return err
+		}
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	var agents []map[string]any
 	params := url.Values{}
-	if client.WorkspaceID != "" {
-		params.Set("workspace_id", client.WorkspaceID)
-	}
+	params.Set("workspace_id", client.WorkspaceID)
 	if v, _ := cmd.Flags().GetBool("include-archived"); v {
 		params.Set("include_archived", "true")
 	}

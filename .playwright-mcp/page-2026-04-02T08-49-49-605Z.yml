@@ -1,0 +1,138 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - list [ref=e8]:
+          - listitem [ref=e9]:
+            - button "L Local Dev" [ref=e10]:
+              - generic [ref=e11]: L
+              - generic [ref=e12]: Local Dev
+              - img [ref=e13]
+        - button [ref=e15]:
+          - img [ref=e16]
+      - generic [ref=e19]:
+        - list [ref=e22]:
+          - listitem [ref=e23]:
+            - link "Inbox 1" [ref=e24] [cursor=pointer]:
+              - /url: /inbox
+              - img [ref=e25]
+              - generic [ref=e28]: Inbox
+              - generic [ref=e29]: "1"
+          - listitem [ref=e30]:
+            - link "My Issues" [ref=e31] [cursor=pointer]:
+              - /url: /my-issues
+              - img [ref=e32]
+              - generic [ref=e36]: My Issues
+          - listitem [ref=e37]:
+            - link "Issues" [ref=e38] [cursor=pointer]:
+              - /url: /issues
+              - img [ref=e39]
+              - generic [ref=e42]: Issues
+        - list [ref=e45]:
+          - listitem [ref=e46]:
+            - link "Agents" [ref=e47] [cursor=pointer]:
+              - /url: /agents
+              - img [ref=e48]
+              - generic [ref=e51]: Agents
+          - listitem [ref=e52]:
+            - link "Runtimes" [ref=e53] [cursor=pointer]:
+              - /url: /runtimes
+              - img [ref=e54]
+              - generic [ref=e56]: Runtimes
+          - listitem [ref=e57]:
+            - link "Skills" [ref=e58] [cursor=pointer]:
+              - /url: /skills
+              - img [ref=e59]
+              - generic [ref=e61]: Skills
+          - listitem [ref=e62]:
+            - link "Settings" [ref=e63] [cursor=pointer]:
+              - /url: /settings
+              - img [ref=e64]
+              - generic [ref=e67]: Settings
+      - button "Toggle Sidebar" [ref=e69]
+    - main [ref=e70]:
+      - generic [ref=e71]:
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - heading "Agents" [level=1] [ref=e76]
+            - button [ref=e77]:
+              - img
+          - generic [ref=e78]:
+            - button "demo Working" [ref=e79]:
+              - generic "demo" [ref=e80]:
+                - img [ref=e81]
+              - generic [ref=e84]:
+                - generic [ref=e85]:
+                  - generic [ref=e86]: demo
+                  - img [ref=e87]
+                - generic [ref=e91]: Working
+            - button "周报助手 Idle" [ref=e92]:
+              - generic "周报助手" [ref=e93]:
+                - img [ref=e94]
+              - generic [ref=e97]:
+                - generic [ref=e98]:
+                  - generic [ref=e99]: 周报助手
+                  - img [ref=e100]
+                - generic [ref=e104]: Idle
+            - button "代码审查员 Idle" [ref=e105]:
+              - generic "代码审查员" [ref=e106]:
+                - img [ref=e107]
+              - generic [ref=e110]:
+                - generic [ref=e111]:
+                  - generic [ref=e112]: 代码审查员
+                  - img [ref=e113]
+                - generic [ref=e117]: Idle
+            - button "测试工程师 Idle" [ref=e118]:
+              - generic "测试工程师" [ref=e119]:
+                - img [ref=e120]
+              - generic [ref=e123]:
+                - generic [ref=e124]:
+                  - generic [ref=e125]: 测试工程师
+                  - img [ref=e126]
+                - generic [ref=e130]: Idle
+        - separator
+        - generic [ref=e133]:
+          - generic [ref=e134]:
+            - generic "demo" [ref=e135]:
+              - img [ref=e136]
+            - generic [ref=e140]:
+              - heading "demo" [level=2] [ref=e141]
+              - generic [ref=e142]: Working
+              - generic [ref=e144]:
+                - img [ref=e145]
+                - text: Claude (Mac.lan)
+            - button [ref=e147]:
+              - img
+          - generic [ref=e148]:
+            - button "Instructions" [ref=e149]:
+              - img [ref=e150]
+              - text: Instructions
+            - button "Skills" [ref=e153]:
+              - img [ref=e154]
+              - text: Skills
+            - button "Tools" [ref=e156]:
+              - img [ref=e157]
+              - text: Tools
+            - button "Triggers" [ref=e159]:
+              - img [ref=e160]
+              - text: Triggers
+            - button "Tasks" [ref=e163]:
+              - img [ref=e164]
+              - text: Tasks
+            - button "Settings" [ref=e167]:
+              - img [ref=e168]
+              - text: Settings
+          - generic [ref=e172]:
+            - generic [ref=e173]:
+              - heading "Agent Instructions" [level=3] [ref=e174]
+              - paragraph [ref=e175]: Define this agent's identity and working style. These instructions are injected into the agent's context for every task.
+            - 'textbox "Define this agent''s role, expertise, and working style. Example: You are a frontend engineer specializing in React and TypeScript. ## Working Style - Write small, focused PRs — one commit per logical change - Prefer composition over inheritance - Always add unit tests for new components ## Constraints - Do not modify shared/ types without explicit approval - Follow the existing component patterns in features/" [ref=e176]':
+              - /placeholder: "Define this agent's role, expertise, and working style.\n\nExample:\nYou are a frontend engineer specializing in React and TypeScript.\n\n## Working Style\n- Write small, focused PRs — one commit per logical change\n- Prefer composition over inheritance\n- Always add unit tests for new components\n\n## Constraints\n- Do not modify shared/ types without explicit approval\n- Follow the existing component patterns in features/"
+              - text: 帮我执行测试，10 个 subagent
+            - generic [ref=e177]:
+              - generic [ref=e178]: 20 characters
+              - button "Save" [disabled]:
+                - img
+                - text: Save
+  - region "Notifications alt+T"
+  - alert [ref=e179]

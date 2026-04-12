@@ -8,7 +8,7 @@ The `multica` CLI connects your local machine to Multica. It handles authenticat
 
 ```bash
 brew tap multica-ai/tap
-brew install multica-cli
+brew install multica
 ```
 
 ### Build from Source
@@ -29,6 +29,16 @@ multica update
 This auto-detects your installation method (Homebrew or manual) and upgrades accordingly.
 
 ## Quick Start
+
+```bash
+# One-command setup: configure, authenticate, and start the daemon
+multica setup
+
+# For self-hosted (local) deployments:
+multica setup --local
+```
+
+Or step by step:
 
 ```bash
 # 1. Authenticate (opens browser for login)
@@ -162,21 +172,29 @@ Agent-specific overrides:
 
 ### Self-Hosted Server
 
-When connecting to a self-hosted Multica instance, point the CLI to your server before logging in:
+When connecting to a self-hosted Multica instance, the easiest approach is:
 
 ```bash
-export MULTICA_APP_URL=https://app.example.com
-export MULTICA_SERVER_URL=wss://api.example.com/ws
+# One command — auto-detects local server, configures, authenticates, starts daemon
+multica setup --local
+```
+
+Or configure manually:
+
+```bash
+# Configure for local Docker Compose (default ports)
+multica config local
+
+# Or set URLs individually:
+# multica config set app_url http://localhost:3000
+# multica config set server_url http://localhost:8080
+
+# For production with TLS:
+# multica config set app_url https://app.example.com
+# multica config set server_url https://api.example.com
 
 multica login
 multica daemon start
-```
-
-Or set them persistently:
-
-```bash
-multica config set app_url https://app.example.com
-multica config set server_url wss://api.example.com/ws
 ```
 
 ### Profiles
@@ -306,6 +324,21 @@ multica issue run-messages <task-id> --since 42 --output json
 
 The `runs` command shows all past and current executions for an issue, including running tasks. The `run-messages` command shows the detailed message log (tool calls, thinking, text, errors) for a single run. Use `--since` for efficient polling of in-progress runs.
 
+## Setup
+
+```bash
+# One-command setup: configure, authenticate, and start the daemon
+multica setup
+
+# For local self-hosted deployments (auto-detects or forces local mode)
+multica setup --local
+
+# Custom ports
+multica setup --local --port 9090 --frontend-port 4000
+```
+
+`multica setup` detects whether a local Multica server is running, configures the CLI, opens your browser for authentication, and starts the daemon — all in one step.
+
 ## Configuration
 
 ### View Config
@@ -316,10 +349,19 @@ multica config show
 
 Shows config file path, server URL, app URL, and default workspace.
 
+### Configure for Local Self-Hosted
+
+```bash
+multica config local                                      # Uses default ports (8080/3000)
+multica config local --port 9090 --frontend-port 4000     # Custom ports
+```
+
+Sets `server_url` and `app_url` for a local Docker Compose deployment in one command.
+
 ### Set Values
 
 ```bash
-multica config set server_url wss://api.example.com/ws
+multica config set server_url https://api.example.com
 multica config set app_url https://app.example.com
 multica config set workspace_id <workspace-id>
 ```

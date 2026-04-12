@@ -1,0 +1,112 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - list [ref=e8]:
+          - listitem [ref=e9]:
+            - button "L Local Dev" [ref=e10]:
+              - generic [ref=e11]: L
+              - generic [ref=e12]: Local Dev
+              - img [ref=e13]
+        - button [ref=e15]:
+          - img [ref=e16]
+      - generic [ref=e19]:
+        - list [ref=e22]:
+          - listitem [ref=e23]:
+            - link "Inbox" [ref=e24] [cursor=pointer]:
+              - /url: /inbox
+              - img [ref=e25]
+              - generic [ref=e28]: Inbox
+          - listitem [ref=e29]:
+            - link "My Issues" [ref=e30] [cursor=pointer]:
+              - /url: /my-issues
+              - img [ref=e31]
+              - generic [ref=e35]: My Issues
+          - listitem [ref=e36]:
+            - link "Issues" [ref=e37] [cursor=pointer]:
+              - /url: /issues
+              - img [ref=e38]
+              - generic [ref=e41]: Issues
+        - list [ref=e44]:
+          - listitem [ref=e45]:
+            - link "Agents" [ref=e46] [cursor=pointer]:
+              - /url: /agents
+              - img [ref=e47]
+              - generic [ref=e50]: Agents
+          - listitem [ref=e51]:
+            - link "Runtimes" [ref=e52] [cursor=pointer]:
+              - /url: /runtimes
+              - img [ref=e53]
+              - generic [ref=e55]: Runtimes
+          - listitem [ref=e56]:
+            - link "Skills" [ref=e57] [cursor=pointer]:
+              - /url: /skills
+              - img [ref=e58]
+              - generic [ref=e60]: Skills
+          - listitem [ref=e61]:
+            - link "Settings" [ref=e62] [cursor=pointer]:
+              - /url: /settings
+              - img [ref=e63]
+              - generic [ref=e66]: Settings
+      - button "Toggle Sidebar" [ref=e68]
+    - main [ref=e69]:
+      - generic [ref=e70]:
+        - generic [ref=e73]:
+          - generic [ref=e74]:
+            - heading "Agents" [level=1] [ref=e75]
+            - button [ref=e76]:
+              - img
+          - button "demo Working" [ref=e78]:
+            - generic "demo" [ref=e79]:
+              - img [ref=e80]
+            - generic [ref=e83]:
+              - generic [ref=e84]:
+                - generic [ref=e85]: demo
+                - img [ref=e86]
+              - generic [ref=e90]: Working
+        - separator
+        - generic [ref=e93]:
+          - generic [ref=e94]:
+            - generic "demo" [ref=e95]:
+              - img [ref=e96]
+            - generic [ref=e100]:
+              - heading "demo" [level=2] [ref=e101]
+              - generic [ref=e102]: Working
+              - generic [ref=e104]:
+                - img [ref=e105]
+                - text: Claude (Mac.lan)
+            - button [ref=e107]:
+              - img
+          - generic [ref=e108]:
+            - button "Instructions" [ref=e109]:
+              - img [ref=e110]
+              - text: Instructions
+            - button "Skills" [ref=e113]:
+              - img [ref=e114]
+              - text: Skills
+            - button "Tools" [ref=e116]:
+              - img [ref=e117]
+              - text: Tools
+            - button "Triggers" [ref=e119]:
+              - img [ref=e120]
+              - text: Triggers
+            - button "Tasks" [ref=e123]:
+              - img [ref=e124]
+              - text: Tasks
+            - button "Settings" [ref=e127]:
+              - img [ref=e128]
+              - text: Settings
+          - generic [ref=e132]:
+            - generic [ref=e133]:
+              - heading "Agent Instructions" [level=3] [ref=e134]
+              - paragraph [ref=e135]: Define this agent's identity and working style. These instructions are injected into the agent's context for every task.
+            - 'textbox "Define this agent''s role, expertise, and working style. Example: You are a frontend engineer specializing in React and TypeScript. ## Working Style - Write small, focused PRs — one commit per logical change - Prefer composition over inheritance - Always add unit tests for new components ## Constraints - Do not modify shared/ types without explicit approval - Follow the existing component patterns in features/" [ref=e136]':
+              - /placeholder: "Define this agent's role, expertise, and working style.\n\nExample:\nYou are a frontend engineer specializing in React and TypeScript.\n\n## Working Style\n- Write small, focused PRs — one commit per logical change\n- Prefer composition over inheritance\n- Always add unit tests for new components\n\n## Constraints\n- Do not modify shared/ types without explicit approval\n- Follow the existing component patterns in features/"
+              - text: 帮我执行测试，10 个 subagent
+            - generic [ref=e137]:
+              - generic [ref=e138]: 20 characters
+              - button "Save" [disabled]:
+                - img
+                - text: Save
+  - region "Notifications alt+T"
+  - alert [ref=e139]

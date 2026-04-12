@@ -23,7 +23,7 @@ import (
 
 var daemonCmd = &cobra.Command{
 	Use:   "daemon",
-	Short: "Manage the local agent runtime daemon",
+	Short: "Control the local agent runtime daemon",
 }
 
 var daemonStartCmd = &cobra.Command{
@@ -163,30 +163,39 @@ func runDaemonBackground(cmd *cobra.Command) error {
 		return fmt.Errorf("start daemon: %w", err)
 	}
 	logFile.Close()
+	pid := child.Process.Pid
 
 	// Detach: we don't Wait() on the child — it runs independently.
 	child.Process.Release()
 
 	// Write PID file.
 	pidPath := daemonPIDPathForProfile(profile)
-	if err := os.WriteFile(pidPath, []byte(strconv.Itoa(child.Process.Pid)), 0o644); err != nil {
+	if err := os.WriteFile(pidPath, []byte(strconv.Itoa(pid)), 0o644); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: could not write PID file: %v\n", err)
 	}
 
-	// Wait briefly and verify daemon started via health endpoint.
-	time.Sleep(2 * time.Second)
-	ctx2, cancel2 := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel2()
-	health = checkDaemonHealthOnPort(ctx2, healthPort)
-	if health["status"] != "running" {
+	// Poll health endpoint until the daemon is ready or timeout.
+	deadline := time.Now().Add(15 * time.Second)
+	started := false
+	for time.Now().Before(deadline) {
+		time.Sleep(500 * time.Millisecond)
+		hctx, hcancel := context.WithTimeout(context.Background(), 2*time.Second)
+		health = checkDaemonHealthOnPort(hctx, healthPort)
+		hcancel()
+		if health["status"] == "running" {
+			started = true
+			break
+		}
+	}
+	if !started {
 		fmt.Fprintf(os.Stderr, "Daemon may not have started successfully. Check logs:\n  %s\n", logPath)
 		return nil
 	}
 
 	if profile != "" {
-		fmt.Fprintf(os.Stderr, "Daemon [%s] started (pid %d, version %s)\n", profile, child.Process.Pid, version)
+		fmt.Fprintf(os.Stderr, "Daemon [%s] started (pid %d, version %s)\n", profile, pid, version)
 	} else {
-		fmt.Fprintf(os.Stderr, "Daemon started (pid %d, version %s)\n", child.Process.Pid, version)
+		fmt.Fprintf(os.Stderr, "Daemon started (pid %d, version %s)\n", pid, version)
 	}
 	fmt.Fprintf(os.Stderr, "Logs: %s\n", logPath)
 	return nil

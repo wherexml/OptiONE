@@ -20,8 +20,8 @@ WHERE id = $1 AND workspace_id = $2;
 INSERT INTO agent (
     workspace_id, name, description, avatar_url, runtime_mode,
     runtime_config, runtime_id, visibility, max_concurrent_tasks, owner_id,
-    tools, triggers, instructions
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    instructions
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING *;
 
 -- name: UpdateAgent :one
@@ -35,8 +35,6 @@ UPDATE agent SET
     visibility = COALESCE(sqlc.narg('visibility'), visibility),
     status = COALESCE(sqlc.narg('status'), status),
     max_concurrent_tasks = COALESCE(sqlc.narg('max_concurrent_tasks'), max_concurrent_tasks),
-    tools = COALESCE(sqlc.narg('tools'), tools),
-    triggers = COALESCE(sqlc.narg('triggers'), triggers),
     instructions = COALESCE(sqlc.narg('instructions'), instructions),
     updated_at = now()
 WHERE id = $1
@@ -77,10 +75,11 @@ SELECT * FROM agent_task_queue
 WHERE id = $1;
 
 -- name: ClaimAgentTask :one
--- Claims the next queued task for an agent, enforcing per-issue serialization:
--- a task is only claimable when no other task for the same issue is already
--- dispatched or running. This guarantees serial execution within an issue
--- while allowing parallel execution across different issues.
+-- Claims the next queued task for an agent, enforcing per-(issue, agent) serialization:
+-- a task is only claimable when no other task for the same issue AND same agent is
+-- already dispatched or running. This allows different agents to work on the same
+-- issue in parallel while preventing a single agent from running duplicate tasks.
+-- Chat tasks (issue_id IS NULL) use chat_session_id for serialization instead.
 UPDATE agent_task_queue
 SET status = 'dispatched', dispatched_at = now()
 WHERE id = (
@@ -88,8 +87,12 @@ WHERE id = (
     WHERE atq.agent_id = $1 AND atq.status = 'queued'
       AND NOT EXISTS (
           SELECT 1 FROM agent_task_queue active
-          WHERE active.issue_id = atq.issue_id
+          WHERE active.agent_id = atq.agent_id
             AND active.status IN ('dispatched', 'running')
+            AND (
+              (atq.issue_id IS NOT NULL AND active.issue_id = atq.issue_id)
+              OR (atq.chat_session_id IS NOT NULL AND active.chat_session_id = atq.chat_session_id)
+            )
       )
     ORDER BY atq.priority DESC, atq.created_at ASC
     LIMIT 1

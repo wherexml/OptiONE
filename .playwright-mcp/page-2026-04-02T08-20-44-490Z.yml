@@ -1,0 +1,10 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: Authorize CLI
+      - generic [ref=e6]: Allow the CLI to access Multica as admin@local?
+    - generic [ref=e7]:
+      - button "Authorize" [ref=e8]
+      - button "Use a different account" [ref=e9]
+  - region "Notifications alt+T"
+  - alert [ref=e10]

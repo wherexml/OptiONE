@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/multica-ai/multica/server/internal/logger"
 	"github.com/multica-ai/multica/server/internal/mention"
+	"github.com/multica-ai/multica/server/internal/sanitize"
 	"github.com/multica-ai/multica/server/internal/util"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
 	"github.com/multica-ai/multica/server/pkg/protocol"
@@ -218,6 +219,9 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	// Expand bare issue identifiers (e.g. MUL-117) into mention links.
 	req.Content = mention.ExpandIssueIdentifiers(r.Context(), h.Queries, issue.WorkspaceID, req.Content)
 
+	// Sanitize HTML to prevent stored XSS.
+	req.Content = sanitize.HTML(req.Content)
+
 	comment, err := h.Queries.CreateComment(r.Context(), db.CreateCommentParams{
 		IssueID:     issue.ID,
 		WorkspaceID: issue.WorkspaceID,
@@ -354,30 +358,24 @@ func (h *Handler) isReplyToMemberThread(parent *db.Comment, content string, issu
 // enqueues a task for each mentioned agent. When parentComment is non-nil
 // (i.e. the comment is a reply), mentions from the parent (thread root) are
 // also included so that agents mentioned in the top-level comment are
-// re-triggered by subsequent replies in the same thread.
-// Skips self-mentions, agents that are already the issue's assignee (handled
-// by on_comment), agents with on_mention trigger disabled, and private agents
-// mentioned by non-owner members (only the agent owner or workspace
+// re-triggered by subsequent replies in the same thread — unless the reply
+// explicitly @mentions only non-agent entities (members, issues), which
+// signals the user is talking to other people and not the agent.
+// Skips self-mentions, agents with on_mention trigger disabled, and private
+// agents mentioned by non-owner members (only the agent owner or workspace
 // admin/owner can mention a private agent).
 // Note: no status gate here — @mention is an explicit action and should work
 // even on done/cancelled issues (the agent can reopen the issue if needed).
 func (h *Handler) enqueueMentionedAgentTasks(ctx context.Context, issue db.Issue, comment db.Comment, parentComment *db.Comment, authorType, authorID string) {
 	wsID := uuidToString(issue.WorkspaceID)
 	mentions := util.ParseMentions(comment.Content)
-	// When replying in a thread, also include mentions from the parent comment
-	// so that agents mentioned in the thread root are triggered by replies.
-	if parentComment != nil {
-		parentMentions := util.ParseMentions(parentComment.Content)
-		seen := make(map[string]bool, len(mentions))
-		for _, m := range mentions {
-			seen[m.Type+":"+m.ID] = true
-		}
-		for _, m := range parentMentions {
-			if !seen[m.Type+":"+m.ID] {
-				mentions = append(mentions, m)
-				seen[m.Type+":"+m.ID] = true
-			}
-		}
+	// When replying in a thread, inherit mentions from the parent comment
+	// so that agents mentioned in the thread root are triggered by replies —
+	// but only when the reply contains no mentions at all (a plain follow-up).
+	// If the reply explicitly @mentions anyone (agents or members), the user
+	// is making a deliberate choice about who to involve; don't auto-inherit.
+	if parentComment != nil && len(mentions) == 0 {
+		mentions = util.ParseMentions(parentComment.Content)
 	}
 	for _, m := range mentions {
 		if m.Type != "agent" {
@@ -388,17 +386,6 @@ func (h *Handler) enqueueMentionedAgentTasks(ctx context.Context, issue db.Issue
 			continue
 		}
 		agentUUID := parseUUID(m.ID)
-		// Prevent duplicate: skip if this agent is the issue's assignee
-		// (already handled by the on_comment trigger above) — but only
-		// when the issue is in a non-terminal status where on_comment
-		// will actually fire. For done/cancelled issues on_comment is
-		// suppressed, so an explicit @mention must still go through.
-		isAssignee := issue.AssigneeType.Valid && issue.AssigneeType.String == "agent" &&
-			issue.AssigneeID.Valid && uuidToString(issue.AssigneeID) == m.ID
-		isTerminal := issue.Status == "done" || issue.Status == "cancelled"
-		if isAssignee && !isTerminal {
-			continue
-		}
 		// Load the agent to check visibility, archive status, and trigger config.
 		agent, err := h.Queries.GetAgent(ctx, agentUUID)
 		if err != nil || !agent.RuntimeID.Valid || agent.ArchivedAt.Valid {
@@ -413,10 +400,6 @@ func (h *Handler) enqueueMentionedAgentTasks(ctx context.Context, issue db.Issue
 					continue
 				}
 			}
-		}
-		// Check if the agent has on_mention trigger enabled.
-		if !agentHasTriggerEnabled(agent.Triggers, "on_mention") {
-			continue
 		}
 		// Dedup: skip if this agent already has a pending task for this issue.
 		hasPending, err := h.Queries.HasPendingTaskForIssueAndAgent(ctx, db.HasPendingTaskForIssueAndAgentParams{
@@ -480,6 +463,9 @@ func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "content is required")
 		return
 	}
+
+	// Sanitize HTML to prevent stored XSS.
+	req.Content = sanitize.HTML(req.Content)
 
 	comment, err := h.Queries.UpdateComment(r.Context(), db.UpdateCommentParams{
 		ID:      parseUUID(commentId),

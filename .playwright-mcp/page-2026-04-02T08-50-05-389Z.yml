@@ -1,0 +1,138 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - list [ref=e8]:
+          - listitem [ref=e9]:
+            - button "L Local Dev" [ref=e10]:
+              - generic [ref=e11]: L
+              - generic [ref=e12]: Local Dev
+              - img [ref=e13]
+        - button [ref=e15]:
+          - img [ref=e16]
+      - generic [ref=e19]:
+        - list [ref=e22]:
+          - listitem [ref=e23]:
+            - link "Inbox 1" [ref=e24] [cursor=pointer]:
+              - /url: /inbox
+              - img [ref=e25]
+              - generic [ref=e28]: Inbox
+              - generic [ref=e29]: "1"
+          - listitem [ref=e30]:
+            - link "My Issues" [ref=e31] [cursor=pointer]:
+              - /url: /my-issues
+              - img [ref=e32]
+              - generic [ref=e36]: My Issues
+          - listitem [ref=e37]:
+            - link "Issues" [ref=e38] [cursor=pointer]:
+              - /url: /issues
+              - img [ref=e39]
+              - generic [ref=e42]: Issues
+        - list [ref=e45]:
+          - listitem [ref=e46]:
+            - link "Agents" [ref=e47] [cursor=pointer]:
+              - /url: /agents
+              - img [ref=e48]
+              - generic [ref=e51]: Agents
+          - listitem [ref=e52]:
+            - link "Runtimes" [ref=e53] [cursor=pointer]:
+              - /url: /runtimes
+              - img [ref=e54]
+              - generic [ref=e56]: Runtimes
+          - listitem [ref=e57]:
+            - link "Skills" [ref=e58] [cursor=pointer]:
+              - /url: /skills
+              - img [ref=e59]
+              - generic [ref=e61]: Skills
+          - listitem [ref=e62]:
+            - link "Settings" [ref=e63] [cursor=pointer]:
+              - /url: /settings
+              - img [ref=e64]
+              - generic [ref=e67]: Settings
+      - button "Toggle Sidebar" [ref=e69]
+    - main [ref=e70]:
+      - generic [ref=e71]:
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - heading "Agents" [level=1] [ref=e76]
+            - button [ref=e77]:
+              - img
+          - generic [ref=e78]:
+            - button "demo Working" [ref=e79]:
+              - generic "demo" [ref=e80]:
+                - img [ref=e81]
+              - generic [ref=e84]:
+                - generic [ref=e85]:
+                  - generic [ref=e86]: demo
+                  - img [ref=e87]
+                - generic [ref=e91]: Working
+            - button "周报助手 Idle" [active] [ref=e92]:
+              - generic "周报助手" [ref=e93]:
+                - img [ref=e94]
+              - generic [ref=e97]:
+                - generic [ref=e98]:
+                  - generic [ref=e99]: 周报助手
+                  - img [ref=e100]
+                - generic [ref=e104]: Idle
+            - button "代码审查员 Idle" [ref=e105]:
+              - generic "代码审查员" [ref=e106]:
+                - img [ref=e107]
+              - generic [ref=e110]:
+                - generic [ref=e111]:
+                  - generic [ref=e112]: 代码审查员
+                  - img [ref=e113]
+                - generic [ref=e117]: Idle
+            - button "测试工程师 Idle" [ref=e118]:
+              - generic "测试工程师" [ref=e119]:
+                - img [ref=e120]
+              - generic [ref=e123]:
+                - generic [ref=e124]:
+                  - generic [ref=e125]: 测试工程师
+                  - img [ref=e126]
+                - generic [ref=e130]: Idle
+        - separator
+        - generic [ref=e180]:
+          - generic [ref=e181]:
+            - generic "周报助手" [ref=e182]:
+              - img [ref=e183]
+            - generic [ref=e187]:
+              - heading "周报助手" [level=2] [ref=e188]
+              - generic [ref=e189]: Idle
+              - generic [ref=e191]:
+                - img [ref=e192]
+                - text: Claude (Mac.lan)
+            - button [ref=e194]:
+              - img
+          - generic [ref=e195]:
+            - button "Instructions" [ref=e196]:
+              - img [ref=e197]
+              - text: Instructions
+            - button "Skills" [ref=e200]:
+              - img [ref=e201]
+              - text: Skills
+            - button "Tools" [ref=e203]:
+              - img [ref=e204]
+              - text: Tools
+            - button "Triggers" [ref=e206]:
+              - img [ref=e207]
+              - text: Triggers
+            - button "Tasks" [ref=e210]:
+              - img [ref=e211]
+              - text: Tasks
+            - button "Settings" [ref=e214]:
+              - img [ref=e215]
+              - text: Settings
+          - generic [ref=e219]:
+            - generic [ref=e220]:
+              - heading "Agent Instructions" [level=3] [ref=e221]
+              - paragraph [ref=e222]: Define this agent's identity and working style. These instructions are injected into the agent's context for every task.
+            - 'textbox "Define this agent''s role, expertise, and working style. Example: You are a frontend engineer specializing in React and TypeScript. ## Working Style - Write small, focused PRs — one commit per logical change - Prefer composition over inheritance - Always add unit tests for new components ## Constraints - Do not modify shared/ types without explicit approval - Follow the existing component patterns in features/" [ref=e223]':
+              - /placeholder: "Define this agent's role, expertise, and working style.\n\nExample:\nYou are a frontend engineer specializing in React and TypeScript.\n\n## Working Style\n- Write small, focused PRs — one commit per logical change\n- Prefer composition over inheritance\n- Always add unit tests for new components\n\n## Constraints\n- Do not modify shared/ types without explicit approval\n- Follow the existing component patterns in features/"
+              - text: "你是团队的周报助手。当被指派任务或被 @ 提及时，收集相关 Issue、PR 和团队成员的工作内容。 ## 工作流程 1. 查看 Workspace 中所有被指派给相关成员的 Issue 2. 查询已完成和进行中的任务状态 3. 整理为结构化周报：本周完成 / 进行中 / 风险与阻塞 4. 输出格式：markdown，可附加 Executive Summary ## 输出规范 - 使用中文输出 - 每个成员独立一节 - 包含具体成果而非泛泛描述 - 标注任何未完成的原因"
+            - generic [ref=e224]:
+              - generic [ref=e225]: 239 characters
+              - button "Save" [disabled]:
+                - img
+                - text: Save
+  - region "Notifications alt+T"
+  - alert [ref=e179]

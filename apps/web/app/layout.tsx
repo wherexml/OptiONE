@@ -1,12 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/sonner";
-import { cn } from "@/lib/utils";
-import { AuthInitializer } from "@/features/auth";
-import { WSProvider } from "@/features/realtime";
-import { ModalRegistry } from "@/features/modals";
+import { Toaster } from "@multica/ui/components/ui/sonner";
+import { cn } from "@multica/ui/lib/utils";
+import { WebProviders } from "@/components/web-providers";
+import { LocaleSync } from "@/components/locale-sync";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
@@ -24,7 +22,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.multica.ai"),
   title: {
-    default: "Multica — AI-Native Task Management",
+    default: "Multica — Project Management for Human + Agent Teams",
     template: "%s | Multica",
   },
   description:
@@ -40,6 +38,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+    site: "@multica_hq",
+    creator: "@multica_hq",
   },
   alternates: {
     canonical: "/",
@@ -50,27 +50,23 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const locale = cookieStore.get("multica-locale")?.value;
-  const lang = locale === "zh" ? "zh" : "en";
-
   return (
     <html
-      lang={lang}
+      lang="en"
       suppressHydrationWarning
       className={cn("antialiased font-sans h-full", geist.variable, geistMono.variable)}
     >
       <body className="h-full overflow-hidden">
+        <LocaleSync />
         <ThemeProvider>
-          <AuthInitializer>
-            <WSProvider>{children}</WSProvider>
-          </AuthInitializer>
-          <ModalRegistry />
+          <WebProviders>
+            {children}
+          </WebProviders>
           <Toaster />
         </ThemeProvider>
       </body>

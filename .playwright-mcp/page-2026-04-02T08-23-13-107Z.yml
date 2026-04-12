@@ -1,0 +1,117 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - list [ref=e8]:
+          - listitem [ref=e9]:
+            - button "L Local Dev" [ref=e10]:
+              - generic [ref=e11]: L
+              - generic [ref=e12]: Local Dev
+              - img [ref=e13]
+        - button [ref=e15]:
+          - img [ref=e16]
+      - generic [ref=e19]:
+        - list [ref=e22]:
+          - listitem [ref=e23]:
+            - link "Inbox" [ref=e24] [cursor=pointer]:
+              - /url: /inbox
+              - img [ref=e25]
+              - generic [ref=e28]: Inbox
+          - listitem [ref=e29]:
+            - link "My Issues" [ref=e30] [cursor=pointer]:
+              - /url: /my-issues
+              - img [ref=e31]
+              - generic [ref=e35]: My Issues
+          - listitem [ref=e36]:
+            - link "Issues" [ref=e37] [cursor=pointer]:
+              - /url: /issues
+              - img [ref=e38]
+              - generic [ref=e41]: Issues
+        - list [ref=e44]:
+          - listitem [ref=e45]:
+            - link "Agents" [ref=e46] [cursor=pointer]:
+              - /url: /agents
+              - img [ref=e47]
+              - generic [ref=e50]: Agents
+          - listitem [ref=e51]:
+            - link "Runtimes" [ref=e52] [cursor=pointer]:
+              - /url: /runtimes
+              - img [ref=e53]
+              - generic [ref=e55]: Runtimes
+          - listitem [ref=e56]:
+            - link "Skills" [ref=e57] [cursor=pointer]:
+              - /url: /skills
+              - img [ref=e58]
+              - generic [ref=e60]: Skills
+          - listitem [ref=e61]:
+            - link "Settings" [ref=e62] [cursor=pointer]:
+              - /url: /settings
+              - img [ref=e63]
+              - generic [ref=e66]: Settings
+      - button "Toggle Sidebar" [ref=e68]
+    - main [ref=e69]:
+      - generic [ref=e70]:
+        - generic [ref=e73]:
+          - generic [ref=e74]:
+            - heading "Runtimes" [level=1] [ref=e75]
+            - generic [ref=e76]: 2/2 online
+          - generic [ref=e77]:
+            - button "Claude (Mac.lan) claude · local" [ref=e78]:
+              - img [ref=e80]
+              - generic [ref=e82]:
+                - generic [ref=e83]: Claude (Mac.lan)
+                - generic [ref=e84]: claude · local
+            - button "Codex (Mac.lan) codex · local" [ref=e86]:
+              - img [ref=e88]
+              - generic [ref=e90]:
+                - generic [ref=e91]: Codex (Mac.lan)
+                - generic [ref=e92]: codex · local
+        - separator
+        - generic [ref=e96]:
+          - generic [ref=e97]:
+            - generic [ref=e98]:
+              - img [ref=e100]
+              - heading "Claude (Mac.lan)" [level=2] [ref=e103]
+            - generic [ref=e104]:
+              - img
+              - text: Online
+          - generic [ref=e105]:
+            - generic [ref=e106]:
+              - generic [ref=e107]:
+                - generic [ref=e108]: Runtime Mode
+                - generic [ref=e109]: local
+              - generic [ref=e110]:
+                - generic [ref=e111]: Provider
+                - generic [ref=e112]: claude
+              - generic [ref=e113]:
+                - generic [ref=e114]: Status
+                - generic [ref=e115]: online
+              - generic [ref=e116]:
+                - generic [ref=e117]: Last Seen
+                - generic [ref=e118]: Just now
+              - generic [ref=e119]:
+                - generic [ref=e120]: Device
+                - generic [ref=e121]: Mac.lan · 2.1.90 (Claude Code)
+              - generic [ref=e122]:
+                - generic [ref=e123]: Daemon ID
+                - generic [ref=e124]: Mac.lan
+            - generic [ref=e125]:
+              - heading "Connection Test" [level=3] [ref=e126]
+              - button "Test Connection" [ref=e129]:
+                - img
+                - text: Test Connection
+            - generic [ref=e130]:
+              - heading "Token Usage" [level=3] [ref=e131]
+              - generic [ref=e132]: Loading usage...
+            - generic [ref=e133]:
+              - heading "Metadata" [level=3] [ref=e134]
+              - generic [ref=e136]: "{ \"version\": \"2.1.90 (Claude Code)\" }"
+            - generic [ref=e137]:
+              - generic [ref=e138]:
+                - generic [ref=e139]: Created
+                - generic [ref=e140]: 2026/4/2 16:22:56
+              - generic [ref=e141]:
+                - generic [ref=e142]: Updated
+                - generic [ref=e143]: 2026/4/2 16:23:11
+  - region "Notifications alt+T"
+  - alert [ref=e144]

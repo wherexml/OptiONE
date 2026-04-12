@@ -16,7 +16,7 @@ import (
 
 var issueCmd = &cobra.Command{
 	Use:   "issue",
-	Short: "Manage issues",
+	Short: "Work with issues",
 }
 
 var issueListCmd = &cobra.Command{
@@ -28,7 +28,7 @@ var issueListCmd = &cobra.Command{
 var issueGetCmd = &cobra.Command{
 	Use:   "get <id>",
 	Short: "Get issue details",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE:  runIssueGet,
 }
 
@@ -41,21 +41,21 @@ var issueCreateCmd = &cobra.Command{
 var issueUpdateCmd = &cobra.Command{
 	Use:   "update <id>",
 	Short: "Update an issue",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE:  runIssueUpdate,
 }
 
 var issueAssignCmd = &cobra.Command{
 	Use:   "assign <id>",
 	Short: "Assign an issue to a member or agent",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE:  runIssueAssign,
 }
 
 var issueStatusCmd = &cobra.Command{
 	Use:   "status <id> <status>",
 	Short: "Change issue status",
-	Args:  cobra.ExactArgs(2),
+	Args:  exactArgs(2),
 	RunE:  runIssueStatus,
 }
 
@@ -63,27 +63,27 @@ var issueStatusCmd = &cobra.Command{
 
 var issueCommentCmd = &cobra.Command{
 	Use:   "comment",
-	Short: "Manage issue comments",
+	Short: "Work with issue comments",
 }
 
 var issueCommentListCmd = &cobra.Command{
 	Use:   "list <issue-id>",
 	Short: "List comments on an issue",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE:  runIssueCommentList,
 }
 
 var issueCommentAddCmd = &cobra.Command{
 	Use:   "add <issue-id>",
 	Short: "Add a comment to an issue",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE:  runIssueCommentAdd,
 }
 
 var issueCommentDeleteCmd = &cobra.Command{
 	Use:   "delete <comment-id>",
 	Short: "Delete a comment",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE:  runIssueCommentDelete,
 }
 
@@ -92,15 +92,22 @@ var issueCommentDeleteCmd = &cobra.Command{
 var issueRunsCmd = &cobra.Command{
 	Use:   "runs <issue-id>",
 	Short: "List execution history for an issue",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE:  runIssueRuns,
 }
 
 var issueRunMessagesCmd = &cobra.Command{
 	Use:   "run-messages <task-id>",
 	Short: "List messages for an execution",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE:  runIssueRunMessages,
+}
+
+var issueSearchCmd = &cobra.Command{
+	Use:   "search <query>",
+	Short: "Search issues by title or description",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runIssueSearch,
 }
 
 var validIssueStatuses = []string{
@@ -117,6 +124,7 @@ func init() {
 	issueCmd.AddCommand(issueCommentCmd)
 	issueCmd.AddCommand(issueRunsCmd)
 	issueCmd.AddCommand(issueRunMessagesCmd)
+	issueCmd.AddCommand(issueSearchCmd)
 
 	issueCommentCmd.AddCommand(issueCommentListCmd)
 	issueCommentCmd.AddCommand(issueCommentAddCmd)
@@ -127,6 +135,7 @@ func init() {
 	issueListCmd.Flags().String("status", "", "Filter by status")
 	issueListCmd.Flags().String("priority", "", "Filter by priority")
 	issueListCmd.Flags().String("assignee", "", "Filter by assignee name")
+	issueListCmd.Flags().String("project", "", "Filter by project ID")
 	issueListCmd.Flags().Int("limit", 50, "Maximum number of issues to return")
 
 	// issue get
@@ -139,6 +148,7 @@ func init() {
 	issueCreateCmd.Flags().String("priority", "", "Issue priority")
 	issueCreateCmd.Flags().String("assignee", "", "Assignee name (member or agent)")
 	issueCreateCmd.Flags().String("parent", "", "Parent issue ID")
+	issueCreateCmd.Flags().String("project", "", "Project ID")
 	issueCreateCmd.Flags().String("due-date", "", "Due date (RFC3339 format)")
 	issueCreateCmd.Flags().String("output", "json", "Output format: table or json")
 	issueCreateCmd.Flags().StringSlice("attachment", nil, "File path(s) to attach (can be specified multiple times)")
@@ -149,6 +159,7 @@ func init() {
 	issueUpdateCmd.Flags().String("status", "", "New status")
 	issueUpdateCmd.Flags().String("priority", "", "New priority")
 	issueUpdateCmd.Flags().String("assignee", "", "New assignee name (member or agent)")
+	issueUpdateCmd.Flags().String("project", "", "Project ID")
 	issueUpdateCmd.Flags().String("due-date", "", "New due date (RFC3339 format)")
 	issueUpdateCmd.Flags().String("output", "json", "Output format: table or json")
 
@@ -178,6 +189,11 @@ func init() {
 	issueCommentAddCmd.Flags().String("parent", "", "Parent comment ID (reply to a specific comment)")
 	issueCommentAddCmd.Flags().StringSlice("attachment", nil, "File path(s) to attach (can be specified multiple times)")
 	issueCommentAddCmd.Flags().String("output", "json", "Output format: table or json")
+
+	// issue search
+	issueSearchCmd.Flags().Int("limit", 20, "Maximum number of results to return")
+	issueSearchCmd.Flags().Bool("include-closed", false, "Include done and cancelled issues")
+	issueSearchCmd.Flags().String("output", "table", "Output format: table or json")
 }
 
 // ---------------------------------------------------------------------------
@@ -193,10 +209,14 @@ func runIssueList(cmd *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	params := url.Values{}
-	if client.WorkspaceID != "" {
-		params.Set("workspace_id", client.WorkspaceID)
+	if client.WorkspaceID == "" {
+		if _, err := requireWorkspaceID(cmd); err != nil {
+			return err
+		}
 	}
+
+	params := url.Values{}
+	params.Set("workspace_id", client.WorkspaceID)
 	if v, _ := cmd.Flags().GetString("status"); v != "" {
 		params.Set("status", v)
 	}
@@ -212,6 +232,9 @@ func runIssueList(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("resolve assignee: %w", resolveErr)
 		}
 		params.Set("assignee_id", aID)
+	}
+	if v, _ := cmd.Flags().GetString("project"); v != "" {
+		params.Set("project_id", v)
 	}
 
 	path := "/api/issues"
@@ -327,6 +350,9 @@ func runIssueCreate(cmd *cobra.Command, _ []string) error {
 	if v, _ := cmd.Flags().GetString("parent"); v != "" {
 		body["parent_issue_id"] = v
 	}
+	if v, _ := cmd.Flags().GetString("project"); v != "" {
+		body["project_id"] = v
+	}
 	if v, _ := cmd.Flags().GetString("due-date"); v != "" {
 		body["due_date"] = v
 	}
@@ -398,6 +424,10 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 	if cmd.Flags().Changed("priority") {
 		v, _ := cmd.Flags().GetString("priority")
 		body["priority"] = v
+	}
+	if cmd.Flags().Changed("project") {
+		v, _ := cmd.Flags().GetString("project")
+		body["project_id"] = v
 	}
 	if cmd.Flags().Changed("due-date") {
 		v, _ := cmd.Flags().GetString("due-date")
@@ -776,6 +806,69 @@ func runIssueRunMessages(cmd *cobra.Command, args []string) error {
 			strVal(m, "type"),
 			strVal(m, "tool"),
 			content,
+		})
+	}
+	cli.PrintTable(os.Stdout, headers, rows)
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Search command
+// ---------------------------------------------------------------------------
+
+func runIssueSearch(cmd *cobra.Command, args []string) error {
+	client, err := newAPIClient(cmd)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	params := url.Values{}
+	params.Set("q", args[0])
+	if v, _ := cmd.Flags().GetInt("limit"); v > 0 {
+		params.Set("limit", fmt.Sprintf("%d", v))
+	}
+	if v, _ := cmd.Flags().GetBool("include-closed"); v {
+		params.Set("include_closed", "true")
+	}
+
+	path := "/api/issues/search?" + params.Encode()
+
+	var result map[string]any
+	if err := client.GetJSON(ctx, path, &result); err != nil {
+		return fmt.Errorf("search issues: %w", err)
+	}
+
+	issuesRaw, _ := result["issues"].([]any)
+
+	output, _ := cmd.Flags().GetString("output")
+	if output == "json" {
+		return cli.PrintJSON(os.Stdout, result)
+	}
+
+	headers := []string{"ID", "IDENTIFIER", "TITLE", "STATUS", "MATCH"}
+	rows := make([][]string, 0, len(issuesRaw))
+	for _, raw := range issuesRaw {
+		issue, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		matchInfo := strVal(issue, "match_source")
+		if snippet := strVal(issue, "matched_snippet"); snippet != "" {
+			if utf8.RuneCountInString(snippet) > 50 {
+				runes := []rune(snippet)
+				snippet = string(runes[:47]) + "..."
+			}
+			matchInfo += ": " + snippet
+		}
+		rows = append(rows, []string{
+			truncateID(strVal(issue, "id")),
+			strVal(issue, "identifier"),
+			strVal(issue, "title"),
+			strVal(issue, "status"),
+			matchInfo,
 		})
 	}
 	cli.PrintTable(os.Stdout, headers, rows)

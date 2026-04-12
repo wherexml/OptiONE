@@ -235,6 +235,10 @@ func (d *Daemon) registerRuntimesForWorkspace(ctx context.Context, workspaceID s
 			d.logger.Warn("skip registering runtime", "name", name, "error", err)
 			continue
 		}
+		if err := agent.CheckMinVersion(name, version); err != nil {
+			d.logger.Warn("skip registering runtime: version too old", "name", name, "version", version, "error", err)
+			continue
+		}
 		displayName := strings.ToUpper(name[:1]) + name[1:]
 		if d.cfg.DeviceName != "" {
 			displayName = fmt.Sprintf("%s (%s)", displayName, d.cfg.DeviceName)
@@ -728,7 +732,11 @@ func (d *Daemon) pollLoop(ctx context.Context) error {
 				continue
 			}
 			if task != nil {
-				d.logger.Info("task received", "task", shortID(task.ID), "issue", task.IssueID)
+				taskTarget := task.IssueID
+				if taskTarget == "" && task.ChatSessionID != "" {
+					taskTarget = "chat:" + shortID(task.ChatSessionID)
+				}
+				d.logger.Info("task received", "task", shortID(task.ID), "target", taskTarget)
 				wg.Add(1)
 				go func(t Task) {
 					defer wg.Done()
@@ -772,7 +780,11 @@ func (d *Daemon) handleTask(ctx context.Context, task Task) {
 	if task.Agent != nil {
 		agentName = task.Agent.Name
 	}
-	taskLog.Info("picked task", "issue", task.IssueID, "agent", agentName, "provider", provider)
+	if task.ChatSessionID != "" {
+		taskLog.Info("picked chat task", "chat_session", shortID(task.ChatSessionID), "agent", agentName, "provider", provider)
+	} else {
+		taskLog.Info("picked task", "issue", task.IssueID, "agent", agentName, "provider", provider)
+	}
 
 	if err := d.client.StartTask(ctx, task.ID); err != nil {
 		taskLog.Error("start task failed", "error", err)
@@ -837,6 +849,13 @@ func (d *Daemon) handleTask(ctx context.Context, task Task) {
 		return
 	}
 
+	// Report usage independently so it's captured even for failed/blocked tasks.
+	if len(result.Usage) > 0 {
+		if err := d.client.ReportTaskUsage(ctx, task.ID, result.Usage); err != nil {
+			taskLog.Warn("report task usage failed", "error", err)
+		}
+	}
+
 	switch result.Status {
 	case "blocked":
 		if err := d.client.FailTask(ctx, task.ID, result.Comment); err != nil {
@@ -878,6 +897,7 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 		AgentInstructions: instructions,
 		AgentSkills:       convertSkillsForEnv(skills),
 		Repos:             convertReposForEnv(task.Repos),
+		ChatSessionID:     task.ChatSessionID,
 	}
 
 	// Try to reuse the workdir from a previous task on the same (agent, issue) pair.
@@ -920,6 +940,14 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 		"MULTICA_AGENT_NAME":   agentName,
 		"MULTICA_AGENT_ID":     task.AgentID,
 		"MULTICA_TASK_ID":      task.ID,
+	}
+	// Ensure the multica CLI is on PATH inside the agent's environment.
+	// Some runtimes (e.g. Codex) run in an isolated sandbox that may not
+	// inherit the daemon's PATH. Prepend the directory of the running
+	// multica binary so that `multica` commands in the agent always resolve.
+	if selfBin, err := os.Executable(); err == nil {
+		binDir := filepath.Dir(selfBin)
+		agentEnv["PATH"] = binDir + string(os.PathListSeparator) + os.Getenv("PATH")
 	}
 	// Point Codex to the per-task CODEX_HOME so it discovers skills natively
 	// without polluting the system ~/.codex/skills/.
@@ -1097,6 +1125,22 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 		"tools", toolCount.Load(),
 	)
 
+	// Convert agent usage map to task usage entries.
+	var usageEntries []TaskUsageEntry
+	for model, u := range result.Usage {
+		if u.InputTokens == 0 && u.OutputTokens == 0 && u.CacheReadTokens == 0 && u.CacheWriteTokens == 0 {
+			continue
+		}
+		usageEntries = append(usageEntries, TaskUsageEntry{
+			Provider:         provider,
+			Model:            model,
+			InputTokens:      u.InputTokens,
+			OutputTokens:     u.OutputTokens,
+			CacheReadTokens:  u.CacheReadTokens,
+			CacheWriteTokens: u.CacheWriteTokens,
+		})
+	}
+
 	switch result.Status {
 	case "completed":
 		if result.Output == "" {
@@ -1107,6 +1151,7 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 			Comment:   result.Output,
 			SessionID: result.SessionID,
 			WorkDir:   env.WorkDir,
+			Usage:     usageEntries,
 		}, nil
 	case "timeout":
 		return TaskResult{}, fmt.Errorf("%s timed out after %s", provider, d.cfg.AgentTimeout)
@@ -1115,7 +1160,7 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 		if errMsg == "" {
 			errMsg = fmt.Sprintf("%s execution %s", provider, result.Status)
 		}
-		return TaskResult{Status: "blocked", Comment: errMsg}, nil
+		return TaskResult{Status: "blocked", Comment: errMsg, Usage: usageEntries}, nil
 	}
 }
 
