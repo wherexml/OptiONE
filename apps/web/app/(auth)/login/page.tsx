@@ -82,7 +82,7 @@ function LoginPageContent() {
     <div className="flex min-h-svh items-center justify-center">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Sign in to Multica</CardTitle>
+          <CardTitle className="text-2xl">Sign in to OptiONE</CardTitle>
           <CardDescription>
             Enter your email and password to continue
           </CardDescription>

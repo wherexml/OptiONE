@@ -74,7 +74,7 @@ describe("LoginPage", () => {
   it("renders the password login form", () => {
     render(<LoginPage />);
 
-    expect(screen.getByText("Sign in to Multica")).toBeInTheDocument();
+    expect(screen.getByText("Sign in to OptiONE")).toBeInTheDocument();
     expect(
       screen.getByText("Enter your email and password to continue"),
     ).toBeInTheDocument();

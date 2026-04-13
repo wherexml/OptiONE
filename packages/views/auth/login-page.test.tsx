@@ -97,7 +97,7 @@ describe("LoginPage", () => {
   // Email step rendering
   // -------------------------------------------------------------------------
 
-  it("renders email form with 'Sign in to Multica' title", () => {
+  it("renders email form with 'Sign in to OptiONE' title", () => {
     render(<LoginPage onSuccess={onSuccess} />);
     expect(
       screen.getByText(/sign in to multica/i),
