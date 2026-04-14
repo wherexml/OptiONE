@@ -249,6 +249,12 @@ export class ApiClient {
     return this.fetch(`/api/decisions${query ? `?${query}` : ""}`);
   }
 
+  async convertAlertToDecision(alertId: string): Promise<DecisionDetail> {
+    return this.fetch(`/api/tower/alerts/${alertId}/decision`, {
+      method: "POST",
+    });
+  }
+
   async createIssue(data: CreateIssueRequest): Promise<Issue> {
     const search = new URLSearchParams();
     if (this.workspaceId) search.set("workspace_id", this.workspaceId);
@@ -316,6 +322,12 @@ export class ApiClient {
     return this.fetch(`/api/comments/${commentId}`, {
       method: "PUT",
       body: JSON.stringify({ content }),
+    });
+  }
+
+  async resendComment(commentId: string): Promise<{ mentioned: number; queued: number }> {
+    return this.fetch(`/api/comments/${commentId}/resend`, {
+      method: "POST",
     });
   }
 

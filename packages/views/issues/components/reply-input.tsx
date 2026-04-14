@@ -28,7 +28,7 @@ interface ReplyInputProps {
 
 function ReplyInput({
   issueId,
-  placeholder = "Leave a reply...",
+  placeholder = "写下回复...",
   avatarType,
   avatarId,
   onSubmit,

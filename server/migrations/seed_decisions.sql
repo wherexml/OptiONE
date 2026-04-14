@@ -1,10 +1,19 @@
--- 决策演示种子数据：覆盖识别、诊断、仿真、推荐、审批、执行、监控全生命周期。
--- 说明：
--- 1. 所有核心关联记录使用固定 UUID，便于重复执行和跨表引用。
--- 2. workspace_id 与 user_id 动态取数据库中的第一条记录。
--- 3. 所有插入都使用 ON CONFLICT DO NOTHING，确保文件可重复执行。
+-- Demo seed data for the simplified supply-chain case set.
+-- Goals:
+-- 1. Clear all existing tasks under the demo project.
+-- 2. Recreate a smaller, more focused task set aligned with the PRD scenarios.
+-- 3. Keep task details business-readable and realistic for project center + my issues.
 
--- 演示项目与执行连接器
+-- Remove the current demo project tasks first.
+WITH cleanup AS (
+    DELETE FROM issue
+    WHERE project_id = '70000000-0000-0000-0000-000000000001'::uuid
+    RETURNING id
+)
+SELECT COUNT(*) AS deleted_demo_issues
+FROM cleanup;
+
+-- Upsert demo project metadata.
 WITH ws AS (
     SELECT id
     FROM workspace
@@ -32,27 +41,32 @@ INSERT INTO project (
 SELECT
     '70000000-0000-0000-0000-000000000001'::uuid,
     ws.id,
-    '供应链决策演示项目',
-    '用于展示从识别、诊断、推荐、审批到执行和监控的完整供应链决策链路。',
+    '供应链异常闭环演示项目',
+    '聚焦爆品断货、区域库存失衡、供应商延期、预测偏差和复盘闭环，用更少的任务演示异常识别、诊断、仿真、审批、执行与复盘。',
     'package',
     'in_progress',
     'member',
     usr.id,
     'high',
-    TIMESTAMPTZ '2026-04-01 09:00:00+08',
-    TIMESTAMPTZ '2026-04-13 10:30:00+08'
+    TIMESTAMPTZ '2026-04-10 09:00:00+08',
+    TIMESTAMPTZ '2026-04-13 21:00:00+08'
 FROM ws
 CROSS JOIN usr
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE
+SET
+    title = EXCLUDED.title,
+    description = EXCLUDED.description,
+    icon = EXCLUDED.icon,
+    status = EXCLUDED.status,
+    lead_type = EXCLUDED.lead_type,
+    lead_id = EXCLUDED.lead_id,
+    priority = EXCLUDED.priority,
+    updated_at = EXCLUDED.updated_at;
 
+-- Upsert demo connector metadata.
 WITH ws AS (
     SELECT id
     FROM workspace
-    ORDER BY created_at ASC
-    LIMIT 1
-), usr AS (
-    SELECT id
-    FROM "user"
     ORDER BY created_at ASC
     LIMIT 1
 )
@@ -80,22 +94,31 @@ SELECT
     jsonb_build_object(
         'owner', '供应链中台',
         'region', 'cn-east-1',
-        'note', '用于调拨、采购和补货动作演示'
+        'note', '用于补货、调拨与采购建议演示'
     ),
     ARRAY[
         'inventory.transfer.create',
-        'purchase.order.create',
-        'shipment.route.update'
+        'purchase.plan.create',
+        'replenishment.order.create'
     ]::text[],
     'healthy',
-    TIMESTAMPTZ '2026-04-13 08:00:00+08',
-    TIMESTAMPTZ '2026-04-01 09:00:00+08',
-    TIMESTAMPTZ '2026-04-13 08:00:00+08'
+    TIMESTAMPTZ '2026-04-13 20:20:00+08',
+    TIMESTAMPTZ '2026-04-10 09:00:00+08',
+    TIMESTAMPTZ '2026-04-13 20:20:00+08'
 FROM ws
-CROSS JOIN usr
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE
+SET
+    name = EXCLUDED.name,
+    kind = EXCLUDED.kind,
+    base_url = EXCLUDED.base_url,
+    capability = EXCLUDED.capability,
+    config = EXCLUDED.config,
+    allowed_actions = EXCLUDED.allowed_actions,
+    health_status = EXCLUDED.health_status,
+    last_health_check = EXCLUDED.last_health_check,
+    updated_at = EXCLUDED.updated_at;
 
--- 核心决策 issue 与 decision_case：共 10 条，覆盖全部关键阶段
+-- Insert the simplified decision tasks.
 WITH ws AS (
     SELECT id
     FROM workspace
@@ -106,6 +129,12 @@ WITH ws AS (
     FROM "user"
     ORDER BY created_at ASC
     LIMIT 1
+), agent_pool AS (
+    SELECT
+        MAX(id::text) FILTER (WHERE name = '异常处理Agent')::uuid AS alert_agent_id,
+        MAX(id::text) FILTER (WHERE name = '治理 Agent')::uuid AS governance_agent_id
+    FROM agent
+    WHERE owner_id = (SELECT id FROM usr)
 ), decision_seed (
     issue_id,
     title,
@@ -113,6 +142,8 @@ WITH ws AS (
     issue_status,
     priority,
     assignee_type,
+    assignee_ref,
+    due_date,
     domain,
     decision_type,
     object_type,
@@ -130,224 +161,178 @@ WITH ws AS (
 ) AS (
     VALUES
         (
-            '71000000-0000-0000-0000-000000000001'::uuid,
-            '季节性备货决策：端午礼盒华南预储',
-            '为端午礼盒旺季提前锁定华南仓储容量与包材，避免节前集中补货造成缺货。',
+            '71000000-0000-0000-0000-00000000a001'::uuid,
+            '季节性备货排期：端午礼盒华南预储窗口',
+            $$触发信号：
+- 华南 KA 渠道要求 4 月 28 日前完成首批铺货
+- 现有礼盒库存只够 6 天，包材锁产窗口还剩 3 天
+- 3PL 提醒节前一周库容会被饮料项目占满
+
+本任务先做排期和资源锁定，不直接下执行单。需要先把库容、包材和预储节奏定下来，避免节前临时补货把华南仓打爆。$$,
             'backlog',
             'high',
-            ''::text,
+            'agent',
+            'alert_agent',
+            TIMESTAMPTZ '2026-04-15 18:00:00+08',
             'supply_chain',
             'seasonal_planning',
             'sku_family',
             'FESTIVAL-GIFT-SOUTH',
-            '在节前两周完成华南区域礼盒安全库存规划，保障重点渠道首发不断货。',
-            '预算增量不超过 180 万元，冷库与常温仓总库容利用率不得超过 85%，不新增临时仓。',
+            '确认华南礼盒预储规模与入仓节奏，让 4 月底首批渠道铺货不断货。',
+            '预算增量不超过 180 万元；常温仓利用率不能超过 85%；不新增临时仓；包材锁产最晚 4 月 16 日 12:00 前确认。',
             'high',
             'manual',
             'identified',
             'draft',
             'pending',
-            TIMESTAMPTZ '2026-04-12 09:00:00+08',
-            TIMESTAMPTZ '2026-04-12 09:00:00+08',
+            TIMESTAMPTZ '2026-04-12 09:20:00+08',
+            TIMESTAMPTZ '2026-04-13 13:10:00+08',
             1
         ),
         (
-            '71000000-0000-0000-0000-000000000002'::uuid,
-            '价格波动应对：PET 包材锁价窗口评估',
-            'PET 原料近两周波动明显，需要判断是否提前锁定二季度包材价格。',
-            'backlog',
-            'medium',
-            ''::text,
-            'supply_chain',
-            'price_hedge',
-            'material',
-            'PET-RESIN-Q2',
-            '在不压缩现金流的前提下评估锁价和分批采购方案，降低二季度包材成本波动。',
-            '锁价金额不超过月均采购额的 1.2 倍，供应商账期不能缩短，仓储周转天数维持在 28 天以内。',
-            'medium',
-            'manual',
-            'identified',
-            'draft',
-            'pending',
-            TIMESTAMPTZ '2026-04-12 14:30:00+08',
-            TIMESTAMPTZ '2026-04-12 14:30:00+08',
-            2
-        ),
-        (
-            '71000000-0000-0000-0000-000000000003'::uuid,
-            '供应商风险评估：华东纸箱供应商交付异常',
-            '华东主纸箱供应商连续三周 OTIF 低于目标，需要识别断供风险并准备缓释方案。',
-            'in_progress',
-            'urgent',
-            'member',
-            'supply_chain',
-            'risk_mitigation',
-            'supplier',
-            'SUP-BOX-EAST-01',
-            '识别主供应商履约下滑的根因与影响范围，明确替代资源与切换条件。',
-            '不能影响 4 月大促订单出库，新增替代供应商的质检周期不得超过 5 天，价格上浮控制在 6% 以内。',
-            'critical',
-            'semi_auto',
-            'diagnosing',
-            'draft',
-            'pending',
-            TIMESTAMPTZ '2026-04-11 10:00:00+08',
-            TIMESTAMPTZ '2026-04-13 09:10:00+08',
-            3
-        ),
-        (
-            '71000000-0000-0000-0000-000000000004'::uuid,
-            '物流路径优化：西南冷链干线切换',
-            '西南暴雨影响原有冷链干线时效，需要比较改道与中转方案对成本和妥投率的影响。',
-            'in_progress',
-            'high',
-            'member',
-            'supply_chain',
-            'route_optimization',
-            'route',
-            'ROUTE-SW-COLDCHAIN',
-            '在保证 48 小时冷链送达的前提下，优化西南区域干线路径与中转节点。',
-            '运输成本增幅不超过 8%，冷链破损率不得高于 0.3%，需要覆盖成都与重庆双仓。',
-            'medium',
-            'auto',
-            'simulating',
-            'draft',
-            'pending',
-            TIMESTAMPTZ '2026-04-10 15:00:00+08',
-            TIMESTAMPTZ '2026-04-13 08:40:00+08',
-            4
-        ),
-        (
-            '71000000-0000-0000-0000-000000000005'::uuid,
-            '区域库存平衡决策：华北与华东库存再平衡',
-            '华北仓积压而华东仓临近断货，需要形成跨区再平衡建议。',
-            'in_review',
-            'medium',
-            'member',
-            'supply_chain',
-            'inventory_rebalance',
-            'region_inventory',
-            'INV-BALANCE-NORTH-EAST',
-            '在不增加总库存的前提下提升重点 SKU 的全国可得率，缩短跨区缺货恢复时间。',
-            '跨区调拨运费不得超过本周预算 40 万元，调拨后各仓安全库存覆盖天数不低于 7 天。',
-            'low',
-            'semi_auto',
-            'recommending',
-            'draft',
-            'pending',
-            TIMESTAMPTZ '2026-04-09 11:30:00+08',
-            TIMESTAMPTZ '2026-04-13 09:20:00+08',
-            5
-        ),
-        (
-            '71000000-0000-0000-0000-000000000006'::uuid,
-            '预测修正决策：618 零食礼包销量修正',
-            '最新投放计划提升了流量预期，需要修正 618 零食礼包销量预测并同步采购节奏。',
-            'in_review',
-            'high',
-            'member',
-            'supply_chain',
-            'demand_forecast',
-            'forecast_cycle',
-            'FC-618-SNACK-2026',
-            '在 24 小时内完成需求重估，并给出采购与产能爬坡建议，避免爆单后缺货。',
-            '预测修正必须落在营销预算和产能排产能力范围内，产线加班不超过连续 5 天。',
-            'high',
-            'auto',
-            'recommending',
-            'draft',
-            'pending',
-            TIMESTAMPTZ '2026-04-08 16:00:00+08',
-            TIMESTAMPTZ '2026-04-13 09:35:00+08',
-            6
-        ),
-        (
-            '71000000-0000-0000-0000-000000000007'::uuid,
-            '紧急调拨决策：华南门店断货预警',
-            '华南核心门店对爆款电解质饮料出现断货预警，需要在审批后立即跨仓调拨。',
+            '71000000-0000-0000-0000-00000000a002'::uuid,
+            '爆品断货响应：电解质饮料华东保供',
+            $$触发信号：
+- OMS 显示近 24 小时订单暴增 62%
+- WMS 显示华东主仓现货只够 0.8 天
+- ERP 在途补货延后 2 天，周末大促不会等货
+
+今天要把补货和跨仓调拨组合方案提到审批流里，目标是先稳住 KA 和日销最高的直营门店。$$,
             'in_review',
             'urgent',
             'member',
+            'owner',
+            TIMESTAMPTZ '2026-04-13 16:30:00+08',
             'supply_chain',
             'emergency_allocation',
-            'store_cluster',
-            'STORE-CLUSTER-SOUTH-A',
-            '在 12 小时内补齐重点门店可售库存，保证周末促销活动不断货。',
-            '调拨过程中不能影响华东线上大促履约，单次门店补货车次不超过 6 车，先满足 A 类门店。',
+            'sku',
+            'SKU-ELECTROLYTE-330ML',
+            '今天 18:00 前锁定补货加调拨组合方案，确保华东核心 KA 与直营网点未来 72 小时不断货。',
+            '先保 KA 和日均销量前 200 门店；调出仓保留不少于 5 天安全库存；总运费控制在 32 万元内；审批通过后 30 分钟内推送 ERP/WMS 沙箱。',
             'critical',
             'semi_auto',
             'awaiting_approval',
             'pending',
             'pending',
-            TIMESTAMPTZ '2026-04-07 13:20:00+08',
-            TIMESTAMPTZ '2026-04-13 09:45:00+08',
-            7
+            TIMESTAMPTZ '2026-04-13 09:50:00+08',
+            TIMESTAMPTZ '2026-04-13 15:05:00+08',
+            2
         ),
         (
-            '71000000-0000-0000-0000-000000000008'::uuid,
-            '供应商选择决策：替补包装膜供应商导入',
-            '现有包装膜主供应商产能紧张，需要在两家备选厂商中确定导入对象。',
-            'todo',
+            '71000000-0000-0000-0000-00000000a003'::uuid,
+            '区域库存失衡：华东缺货与华南积压联动调拨',
+            $$触发信号：
+- 华东 3 个重点仓 A 类 SKU 覆盖天数降到 4.2 天
+- 华南同批 SKU 覆盖天数达到 21 天，促销后尾货明显
+- 财务要求本周不加采购，优先通过内部调拨解决
+
+这条任务要把“缺货”和“积压”一起处理，先拿出一版多仓联动方案，再决定是否进入审批。$$,
+            'in_progress',
             'high',
             'member',
+            'owner',
+            TIMESTAMPTZ '2026-04-14 12:00:00+08',
             'supply_chain',
-            'supplier_selection',
-            'supplier',
-            'SUP-FILM-BACKUP',
-            '在保障包材良率和交期的前提下，尽快完成替补供应商定版并释放试单。',
-            '试单量不低于 30 万件，良率必须达到 98.5%，签约价格不能高于主供应商 5%。',
+            'inventory_rebalance',
+            'region_inventory',
+            'INV-BALANCE-EAST-SOUTH',
+            '拿出一版可执行的跨仓调拨方案，把华东缺货风险拉回安全线，同时把华南积压 SKU 压回目标区间。',
+            '只能动 A 类 SKU；不新增采购；跨区运费不超过 40 万元；调拨后华南仓覆盖天数不低于 10 天。',
             'high',
-            'manual',
-            'approved',
-            'approved',
+            'semi_auto',
+            'recommending',
+            'draft',
             'pending',
-            TIMESTAMPTZ '2026-04-06 10:10:00+08',
-            TIMESTAMPTZ '2026-04-13 08:50:00+08',
-            8
+            TIMESTAMPTZ '2026-04-13 08:10:00+08',
+            TIMESTAMPTZ '2026-04-13 14:40:00+08',
+            3
         ),
         (
-            '71000000-0000-0000-0000-000000000009'::uuid,
-            '爆品保供决策：电解质饮料华东紧急补货',
-            '华东大促提前放量，核心爆品库存在 18 小时内将跌破警戒线，需要立即执行补货。',
+            '71000000-0000-0000-0000-00000000a004'::uuid,
+            '供应商延期处置：华东纸箱替代供应切换',
+            $$触发信号：
+- ERP 显示主纸箱供应商 3 张采购单平均延期 5 天
+- OTD 连续 3 周跌破 75%
+- 大促礼盒外箱预计从 4 月 17 日开始出现缺口
+
+这条任务先把风险和替代节奏看清楚，只允许产出内部采购建议，不直接下正式采购单。$$,
             'in_progress',
             'urgent',
             'member',
+            'owner',
+            TIMESTAMPTZ '2026-04-14 18:00:00+08',
             'supply_chain',
-            'emergency_allocation',
-            'sku',
-            'SKU-ELECTROLYTE-330ML',
-            '通过跨区调拨和加急采购并行补货，确保华东渠道未来 72 小时不断货。',
-            '需优先满足核心 KA 渠道，跨区调拨时不得低于调出仓 5 天安全库存，运输时效必须控制在 24 小时内。',
+            'risk_mitigation',
+            'supplier',
+            'SUP-BOX-EAST-01',
+            '在不影响 4 月大促出库的前提下，明确主供应商保留量、替补厂切入节奏和试单范围。',
+            '替补厂试单 48 小时内出结论；价格上浮控制在 6% 内；新增质检流程不能超过 5 天；本期只允许创建内部采购建议，不直接下正式采购单。',
             'critical',
-            'auto',
-            'executing',
-            'approved',
-            'running',
-            TIMESTAMPTZ '2026-04-05 17:30:00+08',
-            TIMESTAMPTZ '2026-04-13 10:20:00+08',
-            9
+            'manual',
+            'diagnosing',
+            'draft',
+            'pending',
+            TIMESTAMPTZ '2026-04-12 17:30:00+08',
+            TIMESTAMPTZ '2026-04-13 11:20:00+08',
+            4
         ),
         (
-            '71000000-0000-0000-0000-000000000010'::uuid,
-            '爆品保供决策：无糖茶华北保供复盘',
-            '华北区域无糖茶补货动作已完成，需要持续监控补货效果、库存回补速度与缺货恢复情况。',
+            '71000000-0000-0000-0000-00000000a005'::uuid,
+            '预测偏差修正：618 零食礼包销量上修',
+            $$触发信号：
+- 近 7 天预测误差达到 +19%
+- 营销新增 8 场直播和 2 个团购渠道
+- 包材与成品采购还沿用旧 forecast，预计 4 月 16 日起出现缺料
+
+这条任务要先跑完上修后的需求场景，再同步采购提前量和产线爬坡节奏。$$,
+            'todo',
+            'high',
+            'member',
+            'owner',
+            TIMESTAMPTZ '2026-04-13 20:00:00+08',
+            'supply_chain',
+            'demand_forecast',
+            'forecast_cycle',
+            'FC-618-SNACK-2026',
+            '今天内完成未来 14 天需求上修，并同步给出采购提前量和产线爬坡节奏，避免 618 预热阶段断货。',
+            '预测修正不能突破已批营销预算；产线连续加班不超过 5 天；采购提前量最多前移 2 批；预测版本必须可复盘。',
+            'high',
+            'manual',
+            'simulating',
+            'draft',
+            'pending',
+            TIMESTAMPTZ '2026-04-13 09:05:00+08',
+            TIMESTAMPTZ '2026-04-13 12:45:00+08',
+            5
+        ),
+        (
+            '71000000-0000-0000-0000-00000000a006'::uuid,
+            '保供复盘：无糖茶华北调拨效果复核',
+            $$背景：
+- 上周已经执行华东到华北 18,400 箱调拨
+- 现在需要确认缺货率、周转天数和活动履约是否真的达标
+- 这条任务只做复盘总结，不再新增动作执行
+
+复盘结论会直接沉淀到五一前的保供规则里，方便下次不用再从零判断。$$,
             'done',
             'medium',
-            'member',
+            'agent',
+            'governance_agent',
+            TIMESTAMPTZ '2026-04-15 12:00:00+08',
             'supply_chain',
             'inventory_rebalance',
             'sku',
             'SKU-TEA-SUGARFREE-500ML',
-            '确认上周保供动作是否达到预期，并沉淀后续复制的库存平衡策略。',
-            '监控期内维持门店缺货率低于 1.5%，补货后周转天数不高于 11 天，不追加额外营销投放。',
-            'medium',
+            '完成 D+5 复盘，确认这次保供策略是否值得复制到五一档期。',
+            '复盘口径必须使用同一批快照；需要给出正负偏差原因；只输出规则结论，不产生新动作单据。',
+            'low',
             'semi_auto',
             'monitoring',
             'approved',
             'completed',
-            TIMESTAMPTZ '2026-04-05 09:40:00+08',
-            TIMESTAMPTZ '2026-04-13 09:40:00+08',
-            10
+            TIMESTAMPTZ '2026-04-11 10:00:00+08',
+            TIMESTAMPTZ '2026-04-13 18:20:00+08',
+            6
         )
 ), base AS (
     SELECT
@@ -355,49 +340,172 @@ WITH ws AS (
         COALESCE(MAX(position), 0) AS max_position
     FROM issue
     WHERE workspace_id = (SELECT id FROM ws)
-), inserted_issue AS (
-    INSERT INTO issue (
-        id,
-        workspace_id,
-        title,
-        description,
-        status,
-        priority,
-        assignee_type,
-        assignee_id,
-        creator_type,
-        creator_id,
-        project_id,
-        number,
-        position,
-        created_at,
-        updated_at
-    )
-    SELECT
-        seed.issue_id,
-        ws.id,
-        seed.title,
-        seed.description,
-        seed.issue_status,
-        seed.priority,
-        NULLIF(seed.assignee_type, ''),
-        CASE
-            WHEN seed.assignee_type = '' THEN NULL
-            ELSE usr.id
-        END,
-        'member',
-        usr.id,
-        '70000000-0000-0000-0000-000000000001'::uuid,
-        base.max_number + seed.sort_order,
-        base.max_position + seed.sort_order,
-        seed.created_at,
-        seed.updated_at
-    FROM decision_seed AS seed
-    CROSS JOIN ws
-    CROSS JOIN usr
-    CROSS JOIN base
-    ON CONFLICT (id) DO NOTHING
-    RETURNING id
+)
+INSERT INTO issue (
+    id,
+    workspace_id,
+    title,
+    description,
+    status,
+    priority,
+    assignee_type,
+    assignee_id,
+    creator_type,
+    creator_id,
+    project_id,
+    number,
+    position,
+    due_date,
+    created_at,
+    updated_at
+)
+SELECT
+    seed.issue_id,
+    ws.id,
+    seed.title,
+    seed.description,
+    seed.issue_status,
+    seed.priority,
+    seed.assignee_type,
+    CASE seed.assignee_ref
+        WHEN 'owner' THEN usr.id
+        WHEN 'alert_agent' THEN agent_pool.alert_agent_id
+        WHEN 'governance_agent' THEN agent_pool.governance_agent_id
+        ELSE NULL
+    END,
+    'member',
+    usr.id,
+    '70000000-0000-0000-0000-000000000001'::uuid,
+    base.max_number + seed.sort_order,
+    base.max_position + seed.sort_order,
+    seed.due_date,
+    seed.created_at,
+    seed.updated_at
+FROM decision_seed AS seed
+CROSS JOIN ws
+CROSS JOIN usr
+CROSS JOIN agent_pool
+CROSS JOIN base;
+
+-- Insert decision cases for the new tasks.
+WITH ws AS (
+    SELECT id
+    FROM workspace
+    ORDER BY created_at ASC
+    LIMIT 1
+), decision_seed (
+    issue_id,
+    domain,
+    decision_type,
+    object_type,
+    object_id,
+    objective,
+    constraints,
+    risk_level,
+    execution_mode,
+    phase,
+    approval_status,
+    execution_status,
+    created_at,
+    updated_at
+) AS (
+    VALUES
+        (
+            '71000000-0000-0000-0000-00000000a001'::uuid,
+            'supply_chain',
+            'seasonal_planning',
+            'sku_family',
+            'FESTIVAL-GIFT-SOUTH',
+            '确认华南礼盒预储规模与入仓节奏，让 4 月底首批渠道铺货不断货。',
+            '预算增量不超过 180 万元；常温仓利用率不能超过 85%；不新增临时仓；包材锁产最晚 4 月 16 日 12:00 前确认。',
+            'high',
+            'manual',
+            'identified',
+            'draft',
+            'pending',
+            TIMESTAMPTZ '2026-04-12 09:20:00+08',
+            TIMESTAMPTZ '2026-04-13 13:10:00+08'
+        ),
+        (
+            '71000000-0000-0000-0000-00000000a002'::uuid,
+            'supply_chain',
+            'emergency_allocation',
+            'sku',
+            'SKU-ELECTROLYTE-330ML',
+            '今天 18:00 前锁定补货加调拨组合方案，确保华东核心 KA 与直营网点未来 72 小时不断货。',
+            '先保 KA 和日均销量前 200 门店；调出仓保留不少于 5 天安全库存；总运费控制在 32 万元内；审批通过后 30 分钟内推送 ERP/WMS 沙箱。',
+            'critical',
+            'semi_auto',
+            'awaiting_approval',
+            'pending',
+            'pending',
+            TIMESTAMPTZ '2026-04-13 09:50:00+08',
+            TIMESTAMPTZ '2026-04-13 15:05:00+08'
+        ),
+        (
+            '71000000-0000-0000-0000-00000000a003'::uuid,
+            'supply_chain',
+            'inventory_rebalance',
+            'region_inventory',
+            'INV-BALANCE-EAST-SOUTH',
+            '拿出一版可执行的跨仓调拨方案，把华东缺货风险拉回安全线，同时把华南积压 SKU 压回目标区间。',
+            '只能动 A 类 SKU；不新增采购；跨区运费不超过 40 万元；调拨后华南仓覆盖天数不低于 10 天。',
+            'high',
+            'semi_auto',
+            'recommending',
+            'draft',
+            'pending',
+            TIMESTAMPTZ '2026-04-13 08:10:00+08',
+            TIMESTAMPTZ '2026-04-13 14:40:00+08'
+        ),
+        (
+            '71000000-0000-0000-0000-00000000a004'::uuid,
+            'supply_chain',
+            'risk_mitigation',
+            'supplier',
+            'SUP-BOX-EAST-01',
+            '在不影响 4 月大促出库的前提下，明确主供应商保留量、替补厂切入节奏和试单范围。',
+            '替补厂试单 48 小时内出结论；价格上浮控制在 6% 内；新增质检流程不能超过 5 天；本期只允许创建内部采购建议，不直接下正式采购单。',
+            'critical',
+            'manual',
+            'diagnosing',
+            'draft',
+            'pending',
+            TIMESTAMPTZ '2026-04-12 17:30:00+08',
+            TIMESTAMPTZ '2026-04-13 11:20:00+08'
+        ),
+        (
+            '71000000-0000-0000-0000-00000000a005'::uuid,
+            'supply_chain',
+            'demand_forecast',
+            'forecast_cycle',
+            'FC-618-SNACK-2026',
+            '今天内完成未来 14 天需求上修，并同步给出采购提前量和产线爬坡节奏，避免 618 预热阶段断货。',
+            '预测修正不能突破已批营销预算；产线连续加班不超过 5 天；采购提前量最多前移 2 批；预测版本必须可复盘。',
+            'high',
+            'manual',
+            'simulating',
+            'draft',
+            'pending',
+            TIMESTAMPTZ '2026-04-13 09:05:00+08',
+            TIMESTAMPTZ '2026-04-13 12:45:00+08'
+        ),
+        (
+            '71000000-0000-0000-0000-00000000a006'::uuid,
+            'supply_chain',
+            'inventory_rebalance',
+            'sku',
+            'SKU-TEA-SUGARFREE-500ML',
+            '完成 D+5 复盘，确认这次保供策略是否值得复制到五一档期。',
+            '复盘口径必须使用同一批快照；需要给出正负偏差原因；只输出规则结论，不产生新动作单据。',
+            'low',
+            'semi_auto',
+            'monitoring',
+            'approved',
+            'completed',
+            TIMESTAMPTZ '2026-04-11 10:00:00+08',
+            TIMESTAMPTZ '2026-04-13 18:20:00+08'
+        )
 )
 INSERT INTO decision_case (
     issue_id,
@@ -435,10 +543,9 @@ SELECT
     seed.created_at,
     seed.updated_at
 FROM decision_seed AS seed
-CROSS JOIN ws
-ON CONFLICT (issue_id) DO NOTHING;
+CROSS JOIN ws;
 
--- 推荐结论：覆盖推荐中、待审批和已批准阶段
+-- Insert recommendation summaries.
 WITH ws AS (
     SELECT id
     FROM workspace
@@ -475,47 +582,47 @@ CROSS JOIN (
     VALUES
         (
             '72000000-0000-0000-0000-000000000001'::uuid,
-            '71000000-0000-0000-0000-000000000005'::uuid,
-            '建议从华北仓向华东仓调拨 1.8 万箱',
-            '华北仓覆盖天数高于目标 4.2 天，先行调拨可在不追加采购的情况下快速缓解华东缺货。',
-            '预计华东重点 SKU 可得率提升 11%，全国总库存不增加，跨区调拨成本控制在预算内。',
-            0.82::numeric,
+            '71000000-0000-0000-0000-00000000a002'::uuid,
+            '先从华中仓调拨 9,600 箱，再追加 18,000 箱加急补货',
+            '华中仓库存健康、运输半径最优，先调拨可以最快救火；加急补货作为第二层兜底，避免周末活动再被打穿。',
+            '预计 6 小时内恢复 82% 重点门店可售，72 小时缺货率从 11.4% 降到 2.3%；总运费约 28 万元，华中仓仍保留 6.5 天安全库存。',
+            0.94::numeric,
             'scm-copilot-2026-04',
-            'inventory-balance-v1',
-            TIMESTAMPTZ '2026-04-13 09:18:00+08'
+            'emergency-allocation-v3',
+            TIMESTAMPTZ '2026-04-13 14:55:00+08'
         ),
         (
             '72000000-0000-0000-0000-000000000002'::uuid,
-            '71000000-0000-0000-0000-000000000006'::uuid,
-            '建议将 618 零食礼包基线预测上调 18%',
-            '营销新增直播场次与站外投放带来的增量流量已经在预约和加购数据中体现，上调需求预测更符合最新信号。',
-            '预计可减少爆单缺货 23%，同时将加急采购比例压到 15% 以下。',
-            0.89::numeric,
+            '71000000-0000-0000-0000-00000000a003'::uuid,
+            '优先调拨 A 类 SKU 1.6 万箱，暂停华南尾货补单',
+            '现在的重点不是所有 SKU 一起挪，而是先救 7 个 A 类 SKU；暂停华南尾货补单能把仓容和运输额度都让给高周转品。',
+            '预计华东重点 SKU 覆盖天数回到 9.8 天，华南积压金额下降约 120 万元；服务水平提升 6.7 个点，运费控制在 34 万元以内。',
+            0.87::numeric,
             'scm-copilot-2026-04',
-            'forecast-correction-v2',
-            TIMESTAMPTZ '2026-04-13 09:33:00+08'
+            'inventory-balance-v2',
+            TIMESTAMPTZ '2026-04-13 14:30:00+08'
         ),
         (
             '72000000-0000-0000-0000-000000000003'::uuid,
-            '71000000-0000-0000-0000-000000000007'::uuid,
-            '建议优先从华中仓向华南 A 类门店调拨 9600 箱',
-            '华中仓当前库存健康且运输半径最优，优先支援可在最短时间内恢复核心门店可售。',
-            '预计 6 小时内恢复 80% 重点门店货架陈列，周末活动缺货风险下降到 5% 以下。',
-            0.93::numeric,
+            '71000000-0000-0000-0000-00000000a004'::uuid,
+            '主供应商保留 60%，苏州 B 厂承接 40% 应急产能',
+            '主供应商还不能完全切掉，否则会放大切换风险；先让苏州 B 厂承接 40% 应急产能，能在风险和成本之间找到更稳的平衡点。',
+            '可把 4 月下旬纸箱缺口从 26 万套压到 4 万套以内；综合成本上浮 4.8%，试单 48 小时后可决定是否继续放量。',
+            0.85::numeric,
             'scm-copilot-2026-04',
-            'emergency-allocation-v2',
-            TIMESTAMPTZ '2026-04-13 09:42:00+08'
+            'supplier-switch-v2',
+            TIMESTAMPTZ '2026-04-13 11:05:00+08'
         ),
         (
             '72000000-0000-0000-0000-000000000004'::uuid,
-            '71000000-0000-0000-0000-000000000008'::uuid,
-            '建议导入苏州 B 厂作为包装膜替补供应商',
-            '该供应商打样良率和交付承诺更稳定，且具备更快的产能切换能力，综合风险低于另一家备选。',
-            '预计主供应商压力峰值可降低 30%，并将断膜风险从高降到中。',
-            0.86::numeric,
+            '71000000-0000-0000-0000-00000000a005'::uuid,
+            '未来 14 天基线预测上调 22%，采购提前两批锁产',
+            '新增直播和团购渠道已经提前释放了真实锁量，继续沿用旧 forecast 只会把缺料问题后置；先上修预测，再把采购和产线节奏前移两批更稳。',
+            '预计 618 预热期缺料风险从高降到中，爆单缺货减少约 18%，同时把加急采购比例压在 15% 以内。',
+            0.9::numeric,
             'scm-copilot-2026-04',
-            'supplier-selection-v1',
-            TIMESTAMPTZ '2026-04-13 08:45:00+08'
+            'forecast-correction-v3',
+            TIMESTAMPTZ '2026-04-13 12:35:00+08'
         )
 ) AS rec (
     id,
@@ -527,10 +634,9 @@ CROSS JOIN (
     model_version,
     skill_version,
     created_at
-)
-ON CONFLICT (id) DO NOTHING;
+);
 
--- 审批记录：包含待审批、已批准与执行前审批
+-- Insert approval summaries for the approval-stage and review-stage tasks.
 WITH ws AS (
     SELECT id
     FROM workspace
@@ -571,33 +677,23 @@ CROSS JOIN (
     VALUES
         (
             '74000000-0000-0000-0000-000000000001'::uuid,
-            '71000000-0000-0000-0000-000000000007'::uuid,
+            '71000000-0000-0000-0000-00000000a002'::uuid,
             'user'::text,
             'pending'::text,
-            '等待运营总监确认周末活动门店优先级后执行。',
+            '待供应链负责人确认 KA 与直营网点优先级后放行调拨申请。',
             1,
-            TIMESTAMPTZ '2026-04-13 09:43:00+08',
-            TIMESTAMPTZ '2026-04-13 09:45:00+08'
+            TIMESTAMPTZ '2026-04-13 15:00:00+08',
+            TIMESTAMPTZ '2026-04-13 15:05:00+08'
         ),
         (
             '74000000-0000-0000-0000-000000000002'::uuid,
-            '71000000-0000-0000-0000-000000000008'::uuid,
+            '71000000-0000-0000-0000-00000000a006'::uuid,
             'user'::text,
             'approved'::text,
-            '同意导入替补供应商，要求试单结果在三天内回传。',
+            '复盘结果已确认达标，可以把这次跨仓保供规则沉淀到五一前置预案。',
             1,
-            TIMESTAMPTZ '2026-04-13 08:46:00+08',
-            TIMESTAMPTZ '2026-04-13 08:50:00+08'
-        ),
-        (
-            '74000000-0000-0000-0000-000000000003'::uuid,
-            '71000000-0000-0000-0000-000000000009'::uuid,
-            'user'::text,
-            'approved'::text,
-            '允许立即执行跨区调拨，并同步加急采购兜底。',
-            1,
-            TIMESTAMPTZ '2026-04-13 10:00:00+08',
-            TIMESTAMPTZ '2026-04-13 10:05:00+08'
+            TIMESTAMPTZ '2026-04-13 18:10:00+08',
+            TIMESTAMPTZ '2026-04-13 18:20:00+08'
         )
 ) AS approval (
     id,
@@ -608,10 +704,9 @@ CROSS JOIN (
     sort_order,
     created_at,
     updated_at
-)
-ON CONFLICT (id) DO NOTHING;
+);
 
--- 上下文快照：提供诊断、仿真与监控阶段的度量输入
+-- Insert latest snapshot summaries.
 WITH ws AS (
     SELECT id
     FROM workspace
@@ -642,45 +737,73 @@ CROSS JOIN (
     VALUES
         (
             '75000000-0000-0000-0000-000000000001'::uuid,
-            '71000000-0000-0000-0000-000000000003'::uuid,
-            'supplier_scorecard'::text,
-            'SUP-BOX-EAST-01/2026-W15'::text,
+            '71000000-0000-0000-0000-00000000a002'::uuid,
+            'oms_wms_merge'::text,
+            'SKU-ELECTROLYTE-330ML/2026-04-13-1000'::text,
             jsonb_build_object(
-                'otif', 0.71,
-                'defect_rate', 0.028,
-                'capacity_gap', 120000,
-                'late_orders', 37
+                'orders_24h_growth_pct', 0.62,
+                'inventory_days', 0.8,
+                'inbound_delay_days', 2,
+                'core_store_count', 200
             ),
-            TIMESTAMPTZ '2026-04-13 09:00:00+08',
-            TIMESTAMPTZ '2026-04-13 09:01:00+08'
+            TIMESTAMPTZ '2026-04-13 10:00:00+08',
+            TIMESTAMPTZ '2026-04-13 10:02:00+08'
         ),
         (
             '75000000-0000-0000-0000-000000000002'::uuid,
-            '71000000-0000-0000-0000-000000000004'::uuid,
-            'tms_simulation'::text,
-            'ROUTE-SW-COLDCHAIN/ALT-B'::text,
+            '71000000-0000-0000-0000-00000000a003'::uuid,
+            'inventory_balance'::text,
+            'EAST-SOUTH-A-SKU/2026-W15'::text,
             jsonb_build_object(
-                'eta_hours', 36,
-                'cost_delta_pct', 0.054,
-                'damage_risk', 0.002,
-                'coverage_city_count', 18
+                'east_inventory_days', 4.2,
+                'south_inventory_days', 21.0,
+                'excess_units', 18500,
+                'at_risk_skus', 7
             ),
-            TIMESTAMPTZ '2026-04-13 08:32:00+08',
-            TIMESTAMPTZ '2026-04-13 08:33:00+08'
+            TIMESTAMPTZ '2026-04-13 13:40:00+08',
+            TIMESTAMPTZ '2026-04-13 13:42:00+08'
         ),
         (
             '75000000-0000-0000-0000-000000000003'::uuid,
-            '71000000-0000-0000-0000-000000000010'::uuid,
-            'bi_monitor'::text,
-            'SKU-TEA-SUGARFREE-500ML/D+3'::text,
+            '71000000-0000-0000-0000-00000000a004'::uuid,
+            'supplier_scorecard'::text,
+            'SUP-BOX-EAST-01/2026-W15'::text,
             jsonb_build_object(
-                'fill_rate', 0.987,
-                'stockout_rate', 0.011,
-                'sell_through_days', 9.4,
-                'transfer_units', 18400
+                'otd', 0.74,
+                'delayed_po_count', 3,
+                'defect_rate', 0.019,
+                'shortage_units', 260000
             ),
-            TIMESTAMPTZ '2026-04-13 09:35:00+08',
-            TIMESTAMPTZ '2026-04-13 09:36:00+08'
+            TIMESTAMPTZ '2026-04-13 10:40:00+08',
+            TIMESTAMPTZ '2026-04-13 10:41:00+08'
+        ),
+        (
+            '75000000-0000-0000-0000-000000000004'::uuid,
+            '71000000-0000-0000-0000-00000000a005'::uuid,
+            'forecast_watch'::text,
+            'SKU-SNACK-GIFT-618/2026-W15'::text,
+            jsonb_build_object(
+                'mape_7d', 0.19,
+                'live_sessions_added', 8,
+                'group_buy_locked_units', 46000,
+                'material_gap_start_in_days', 3
+            ),
+            TIMESTAMPTZ '2026-04-13 11:55:00+08',
+            TIMESTAMPTZ '2026-04-13 12:00:00+08'
+        ),
+        (
+            '75000000-0000-0000-0000-000000000005'::uuid,
+            '71000000-0000-0000-0000-00000000a006'::uuid,
+            'bi_review'::text,
+            'SKU-TEA-SUGARFREE-500ML/D+5'::text,
+            jsonb_build_object(
+                'stockout_rate', 0.011,
+                'service_level', 0.984,
+                'transfer_units', 18400,
+                'turnover_days', 9.6
+            ),
+            TIMESTAMPTZ '2026-04-13 18:00:00+08',
+            TIMESTAMPTZ '2026-04-13 18:02:00+08'
         )
 ) AS snapshot (
     id,
@@ -690,10 +813,9 @@ CROSS JOIN (
     metrics,
     captured_at,
     created_at
-)
-ON CONFLICT (id) DO NOTHING;
+);
 
--- 执行动作：一个运行中、一个已完成
+-- Insert execution traces.
 WITH ws AS (
     SELECT id
     FROM workspace
@@ -729,8 +851,8 @@ SELECT
     action.external_ref,
     action.rollback_payload,
     action.status,
-    gen_random_uuid(),
-    action.error_message,
+    NULL::uuid,
+    ''::text,
     action.started_at,
     action.completed_at,
     action.created_at,
@@ -740,33 +862,33 @@ CROSS JOIN (
     VALUES
         (
             '77000000-0000-0000-0000-000000000001'::uuid,
-            '71000000-0000-0000-0000-000000000009'::uuid,
-            'decision-action-71000000-0000-0000-0000-000000000009',
+            '71000000-0000-0000-0000-00000000a002'::uuid,
+            'decision-action-71000000-0000-0000-0000-00000000a002',
             '76000000-0000-0000-0000-000000000001'::uuid,
             'inventory.transfer.create'::text,
             jsonb_build_object(
                 'sku', 'SKU-ELECTROLYTE-330ML',
                 'from_warehouse', 'WH-CENTRAL-02',
                 'to_warehouse', 'WH-EAST-03',
-                'quantity', 24000,
+                'quantity', 9600,
+                'eta_hours', 8,
                 'priority', 'urgent'
             ),
-            'ERP-TR-20260413-001'::text,
+            'ERP-TR-20260413-021'::text,
             jsonb_build_object(
                 'action', 'inventory.transfer.cancel',
-                'external_ref', 'ERP-TR-20260413-001'
+                'external_ref', 'ERP-TR-20260413-021'
             ),
             'running'::text,
-            ''::text,
-            TIMESTAMPTZ '2026-04-13 10:08:00+08',
+            TIMESTAMPTZ '2026-04-13 15:12:00+08',
             NULL::timestamptz,
-            TIMESTAMPTZ '2026-04-13 10:07:30+08',
-            TIMESTAMPTZ '2026-04-13 10:20:00+08'
+            TIMESTAMPTZ '2026-04-13 15:11:30+08',
+            TIMESTAMPTZ '2026-04-13 15:12:00+08'
         ),
         (
             '77000000-0000-0000-0000-000000000002'::uuid,
-            '71000000-0000-0000-0000-000000000010'::uuid,
-            'decision-action-71000000-0000-0000-0000-000000000010',
+            '71000000-0000-0000-0000-00000000a006'::uuid,
+            'decision-action-71000000-0000-0000-0000-00000000a006',
             '76000000-0000-0000-0000-000000000001'::uuid,
             'inventory.transfer.create'::text,
             jsonb_build_object(
@@ -782,11 +904,10 @@ CROSS JOIN (
                 'external_ref', 'ERP-TR-20260410-017'
             ),
             'completed'::text,
-            ''::text,
             TIMESTAMPTZ '2026-04-10 15:10:00+08',
             TIMESTAMPTZ '2026-04-10 20:45:00+08',
             TIMESTAMPTZ '2026-04-10 15:09:30+08',
-            TIMESTAMPTZ '2026-04-13 09:40:00+08'
+            TIMESTAMPTZ '2026-04-13 18:20:00+08'
         )
 ) AS action (
     id,
@@ -798,15 +919,13 @@ CROSS JOIN (
     external_ref,
     rollback_payload,
     status,
-    error_message,
     started_at,
     completed_at,
     created_at,
     updated_at
-)
-ON CONFLICT (idempotency_key) DO NOTHING;
+);
 
--- 审计轨迹：覆盖创建、快照、推荐、审批与执行节点
+-- Insert cleaner collaboration notes so task detail pages feel more realistic.
 WITH ws AS (
     SELECT id
     FROM workspace
@@ -817,152 +936,147 @@ WITH ws AS (
     FROM "user"
     ORDER BY created_at ASC
     LIMIT 1
+), agent_pool AS (
+    SELECT
+        MAX(id::text) FILTER (WHERE name = '异常处理Agent')::uuid AS alert_agent_id,
+        MAX(id::text) FILTER (WHERE name = '调拨分配 Agent')::uuid AS transfer_agent_id,
+        MAX(id::text) FILTER (WHERE name = '采购计划 Agent')::uuid AS procurement_agent_id,
+        MAX(id::text) FILTER (WHERE name = '需求预测 Agent')::uuid AS forecast_agent_id,
+        MAX(id::text) FILTER (WHERE name = '治理 Agent')::uuid AS governance_agent_id
+    FROM agent
+    WHERE owner_id = (SELECT id FROM usr)
 )
-INSERT INTO audit_event (
+INSERT INTO comment (
     id,
-    workspace_id,
-    decision_case_id,
-    actor_type,
-    actor_id,
-    action,
-    target_type,
-    target_id,
-    old_state,
-    new_state,
-    metadata,
-    ip_address,
-    user_agent,
-    created_at
+    issue_id,
+    author_type,
+    author_id,
+    content,
+    type,
+    created_at,
+    updated_at,
+    parent_id,
+    workspace_id
 )
 SELECT
-    event.id,
-    ws.id,
-    event.decision_case_id,
-    event.actor_type,
-    usr.id,
-    event.action,
-    event.target_type,
-    event.target_id,
-    event.old_state,
-    event.new_state,
-    event.metadata,
-    event.ip_address,
-    event.user_agent,
-    event.created_at
+    note.id,
+    note.issue_id,
+    note.author_type,
+    CASE note.author_ref
+        WHEN 'owner' THEN usr.id
+        WHEN 'alert_agent' THEN agent_pool.alert_agent_id
+        WHEN 'transfer_agent' THEN agent_pool.transfer_agent_id
+        WHEN 'procurement_agent' THEN agent_pool.procurement_agent_id
+        WHEN 'forecast_agent' THEN agent_pool.forecast_agent_id
+        WHEN 'governance_agent' THEN agent_pool.governance_agent_id
+        ELSE usr.id
+    END,
+    note.content,
+    note.type,
+    note.created_at,
+    note.updated_at,
+    NULL::uuid,
+    ws.id
 FROM ws
 CROSS JOIN usr
+CROSS JOIN agent_pool
 CROSS JOIN (
     VALUES
         (
-            '78000000-0000-0000-0000-000000000001'::uuid,
-            '71000000-0000-0000-0000-000000000001'::uuid,
-            'user'::text,
-            'decision.created'::text,
-            'decision_case'::text,
-            '71000000-0000-0000-0000-000000000001'::uuid,
-            '{}'::jsonb,
-            jsonb_build_object('phase', 'identified', 'approval_status', 'draft'),
-            jsonb_build_object('note', '创建季节性备货决策以进入排期池'),
-            '127.0.0.1'::text,
-            'seed_decisions.sql'::text,
-            TIMESTAMPTZ '2026-04-12 09:00:00+08'
+            '79000000-0000-0000-0000-000000000001'::uuid,
+            '71000000-0000-0000-0000-00000000a001'::uuid,
+            'agent'::text,
+            'alert_agent'::text,
+            $$我先把这条任务放在排期池，不是因为已经缺货，而是因为窗口很窄。建议先锁三件事：
+
+1. 华南 3PL 4/20-4/28 的常温库容
+2. 礼盒外箱与隔板的锁产时间
+3. KA 渠道首批铺货顺序
+
+库容和包材确认前，不建议直接进入审批流。$$,
+            'comment'::text,
+            TIMESTAMPTZ '2026-04-13 13:10:00+08',
+            TIMESTAMPTZ '2026-04-13 13:10:00+08'
         ),
         (
-            '78000000-0000-0000-0000-000000000002'::uuid,
-            '71000000-0000-0000-0000-000000000003'::uuid,
-            'user'::text,
-            'decision.context_snapshot_captured'::text,
-            'decision_context_snapshot'::text,
-            '75000000-0000-0000-0000-000000000001'::uuid,
-            '{}'::jsonb,
-            jsonb_build_object('source', 'supplier_scorecard', 'otif', 0.71),
-            jsonb_build_object('note', '记录供应商异常快照用于诊断'),
-            '127.0.0.1'::text,
-            'seed_decisions.sql'::text,
-            TIMESTAMPTZ '2026-04-13 09:01:00+08'
+            '79000000-0000-0000-0000-000000000002'::uuid,
+            '71000000-0000-0000-0000-00000000a002'::uuid,
+            'agent'::text,
+            'transfer_agent'::text,
+            $$我比对了 3 个可调出仓：
+
+- 华中仓可调 9,600 箱，8 小时可达，影响最小
+- 华南仓不能再抽货，否则周末活动库存会被打穿
+- 华北仓运费高 18%，只适合作为最后兜底
+
+建议按“先调拨、后加急补货”的顺序执行。$$,
+            'comment'::text,
+            TIMESTAMPTZ '2026-04-13 14:48:00+08',
+            TIMESTAMPTZ '2026-04-13 14:48:00+08'
         ),
         (
-            '78000000-0000-0000-0000-000000000003'::uuid,
-            '71000000-0000-0000-0000-000000000006'::uuid,
-            'user'::text,
-            'decision.recommendation_generated'::text,
-            'decision_recommendation'::text,
-            '72000000-0000-0000-0000-000000000002'::uuid,
-            '{}'::jsonb,
-            jsonb_build_object('confidence_score', 0.89, 'title', '建议将 618 零食礼包基线预测上调 18%'),
-            jsonb_build_object('note', '生成预测修正建议'),
-            '127.0.0.1'::text,
-            'seed_decisions.sql'::text,
-            TIMESTAMPTZ '2026-04-13 09:33:00+08'
+            '79000000-0000-0000-0000-000000000003'::uuid,
+            '71000000-0000-0000-0000-00000000a002'::uuid,
+            'member'::text,
+            'owner'::text,
+            $$我这边等运营总监在 15:30 前确认 KA 与直营网点优先级。审批一过，就把调拨申请和加急补货同时推到沙箱。$$,
+            'comment'::text,
+            TIMESTAMPTZ '2026-04-13 15:00:00+08',
+            TIMESTAMPTZ '2026-04-13 15:00:00+08'
         ),
         (
-            '78000000-0000-0000-0000-000000000004'::uuid,
-            '71000000-0000-0000-0000-000000000007'::uuid,
-            'user'::text,
-            'decision.approval_requested'::text,
-            'decision_approval'::text,
-            '74000000-0000-0000-0000-000000000001'::uuid,
-            jsonb_build_object('approval_status', 'draft'),
-            jsonb_build_object('approval_status', 'pending'),
-            jsonb_build_object('note', '已提交紧急调拨审批'),
-            '127.0.0.1'::text,
-            'seed_decisions.sql'::text,
-            TIMESTAMPTZ '2026-04-13 09:45:00+08'
+            '79000000-0000-0000-0000-000000000004'::uuid,
+            '71000000-0000-0000-0000-00000000a003'::uuid,
+            'agent'::text,
+            'transfer_agent'::text,
+            $$华东真正缺的不是所有 SKU，而是 7 个 A 类 SKU。按 1.6 万箱方案调拨后，华东覆盖天数可以回到 9.8 天，华南仍保留 11 天安全库存。$$,
+            'comment'::text,
+            TIMESTAMPTZ '2026-04-13 14:05:00+08',
+            TIMESTAMPTZ '2026-04-13 14:05:00+08'
         ),
         (
-            '78000000-0000-0000-0000-000000000005'::uuid,
-            '71000000-0000-0000-0000-000000000008'::uuid,
-            'user'::text,
-            'decision.approval_granted'::text,
-            'decision_approval'::text,
-            '74000000-0000-0000-0000-000000000002'::uuid,
-            jsonb_build_object('approval_status', 'pending'),
-            jsonb_build_object('approval_status', 'approved'),
-            jsonb_build_object('note', '替补供应商导入获得批准'),
-            '127.0.0.1'::text,
-            'seed_decisions.sql'::text,
-            TIMESTAMPTZ '2026-04-13 08:50:00+08'
+            '79000000-0000-0000-0000-000000000005'::uuid,
+            '71000000-0000-0000-0000-00000000a004'::uuid,
+            'agent'::text,
+            'procurement_agent'::text,
+            $$主供应商延期根因不是单一产能不足，而是版辊返修和纸浆切换叠加。苏州 B 厂最快 4/16 上午可以出首批 8 万套试单，建议只放 40% 产能做应急。$$,
+            'comment'::text,
+            TIMESTAMPTZ '2026-04-13 10:55:00+08',
+            TIMESTAMPTZ '2026-04-13 10:55:00+08'
         ),
         (
-            '78000000-0000-0000-0000-000000000006'::uuid,
-            '71000000-0000-0000-0000-000000000009'::uuid,
-            'user'::text,
-            'decision.execution_started'::text,
-            'action_run'::text,
-            '77000000-0000-0000-0000-000000000001'::uuid,
-            jsonb_build_object('execution_status', 'pending'),
-            jsonb_build_object('execution_status', 'running'),
-            jsonb_build_object('external_ref', 'ERP-TR-20260413-001'),
-            '127.0.0.1'::text,
-            'seed_decisions.sql'::text,
-            TIMESTAMPTZ '2026-04-13 10:08:00+08'
+            '79000000-0000-0000-0000-000000000006'::uuid,
+            '71000000-0000-0000-0000-00000000a005'::uuid,
+            'agent'::text,
+            'forecast_agent'::text,
+            $$预测误差主要来自两个新增渠道：直播预约量比基线高 31%，团购锁量高 18%。如果今天不改预测，4/16 起会先缺外箱，再缺成品。$$,
+            'comment'::text,
+            TIMESTAMPTZ '2026-04-13 12:20:00+08',
+            TIMESTAMPTZ '2026-04-13 12:20:00+08'
         ),
         (
-            '78000000-0000-0000-0000-000000000007'::uuid,
-            '71000000-0000-0000-0000-000000000010'::uuid,
-            'user'::text,
-            'decision.execution_completed'::text,
-            'action_run'::text,
-            '77000000-0000-0000-0000-000000000002'::uuid,
-            jsonb_build_object('execution_status', 'running'),
-            jsonb_build_object('execution_status', 'completed'),
-            jsonb_build_object('external_ref', 'ERP-TR-20260410-017', 'monitor_window', 'D+3'),
-            '127.0.0.1'::text,
-            'seed_decisions.sql'::text,
-            TIMESTAMPTZ '2026-04-13 09:40:00+08'
+            '79000000-0000-0000-0000-000000000007'::uuid,
+            '71000000-0000-0000-0000-00000000a006'::uuid,
+            'agent'::text,
+            'governance_agent'::text,
+            $$复盘结论：
+
+- 华北缺货率从 6.2% 降到 1.1%
+- 调拨完成后 48 小时内门店补齐率 93%
+- 主要问题不是调拨慢，而是审批确认晚了 2 小时
+
+建议把“18:00 前完成保供审批”固化成节假日规则。$$,
+            'comment'::text,
+            TIMESTAMPTZ '2026-04-13 18:18:00+08',
+            TIMESTAMPTZ '2026-04-13 18:18:00+08'
         )
-) AS event (
+) AS note (
     id,
-    decision_case_id,
-    actor_type,
-    action,
-    target_type,
-    target_id,
-    old_state,
-    new_state,
-    metadata,
-    ip_address,
-    user_agent,
-    created_at
-)
-ON CONFLICT (id) DO NOTHING;
+    issue_id,
+    author_type,
+    author_ref,
+    content,
+    type,
+    created_at,
+    updated_at
+);

@@ -42,7 +42,7 @@ describe("SettingsPage", () => {
   it("renders Chinese labels by default", () => {
     render(<SettingsPage />);
 
-    expect(screen.getByText("平台设置")).toBeInTheDocument();
+    expect(screen.getByText("设置")).toBeInTheDocument();
     expect(screen.getByText("我的账户")).toBeInTheDocument();
     expect(screen.getByText("个人资料")).toBeInTheDocument();
     expect(screen.getByText("外观")).toBeInTheDocument();

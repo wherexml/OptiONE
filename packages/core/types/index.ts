@@ -21,6 +21,8 @@ export type {
   AgentTask,
   AgentRuntime,
   RuntimeDevice,
+  AgentTrigger,
+  AgentTriggerType,
   CreateAgentRequest,
   UpdateAgentRequest,
   Skill,

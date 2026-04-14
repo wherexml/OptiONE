@@ -121,7 +121,7 @@ export function CreateIssueModal({ onClose, data }: { onClose: () => void; data?
             <div className="flex items-center justify-center size-5 rounded-full bg-emerald-500/15 text-emerald-500">
               <Check className="size-3" />
             </div>
-            <span className="text-sm font-medium">决策单已创建</span>
+            <span className="text-sm font-medium">任务已创建</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground ml-7">
             <StatusIcon status={issue.status} className="size-3.5 shrink-0" />
@@ -135,12 +135,12 @@ export function CreateIssueModal({ onClose, data }: { onClose: () => void; data?
               toast.dismiss(t);
             }}
           >
-            查看决策单
+            查看任务
           </button>
         </div>
       ), { duration: 5000 });
     } catch {
-      toast.error("创建决策单失败");
+      toast.error("创建任务失败");
     } finally {
       setSubmitting(false);
     }
@@ -159,7 +159,7 @@ export function CreateIssueModal({ onClose, data }: { onClose: () => void; data?
             : "!max-w-2xl !w-full !h-96 !-translate-y-1/2",
         )}
       >
-        <DialogTitle className="sr-only">新建决策单</DialogTitle>
+        <DialogTitle className="sr-only">新建任务</DialogTitle>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-3 pb-2 shrink-0">
@@ -172,7 +172,7 @@ export function CreateIssueModal({ onClose, data }: { onClose: () => void; data?
                 <ChevronRight className="size-3 text-muted-foreground/50" />
               </>
             )}
-            <span className="font-medium">{data?.parent_issue_id ? "新建子任务" : "新建决策单"}</span>
+            <span className="font-medium">{data?.parent_issue_id ? "新建子任务" : "新建任务"}</span>
           </div>
           <div className="flex items-center gap-1">
             <Tooltip>
@@ -209,7 +209,7 @@ export function CreateIssueModal({ onClose, data }: { onClose: () => void; data?
           <TitleEditor
             autoFocus
             defaultValue={draft.title}
-            placeholder="输入决策单标题"
+            placeholder="输入任务标题"
             className="text-lg font-semibold"
             onChange={(v) => updateTitle(v)}
             onSubmit={handleSubmit}
@@ -282,7 +282,7 @@ export function CreateIssueModal({ onClose, data }: { onClose: () => void; data?
             onSelect={(file) => descEditorRef.current?.uploadFile(file)}
           />
           <Button size="sm" onClick={handleSubmit} disabled={!title.trim() || submitting}>
-            {submitting ? "创建中..." : "创建决策单"}
+            {submitting ? "创建中..." : "创建任务"}
           </Button>
         </div>
       </DialogContent>

@@ -41,6 +41,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@multica/ui/compon
 import type { Project, ProjectStatus, ProjectPriority, UpdateProjectRequest } from "@multica/core/types";
 import { PriorityIcon } from "../../issues/components/priority-icon";
 import { TOPIC_TEMPLATES, getTopicTemplateById } from "./topic-templates";
+import { getProjectIconValue } from "./project-icon";
 
 function formatRelativeDate(date: string): string {
   const diff = Date.now() - new Date(date).getTime();
@@ -79,9 +80,9 @@ function ProjectRow({ project }: { project: Project }) {
       {/* Icon + Name (navigates to detail) */}
       <AppLink
         href={`/projects/${project.id}`}
-        className="flex min-w-0 flex-1 items-center gap-2"
+        className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden"
       >
-        <span className="shrink-0 w-[24px] text-center text-base">{project.icon || "📁"}</span>
+        <span className="shrink-0 w-[24px] text-center text-base">{getProjectIconValue(project.icon)}</span>
         <span className="min-w-0 flex-1 truncate font-medium">{project.title}</span>
       </AppLink>
 

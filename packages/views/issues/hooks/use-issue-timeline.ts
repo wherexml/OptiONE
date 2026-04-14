@@ -14,6 +14,7 @@ import type {
 import { issueTimelineOptions, issueKeys } from "@multica/core/issues/queries";
 import {
   useCreateComment,
+  useResendComment,
   useUpdateComment,
   useDeleteComment,
   useToggleCommentReaction,
@@ -46,6 +47,7 @@ export function useIssueTimeline(issueId: string, userId?: string) {
   const [submitting, setSubmitting] = useState(false);
 
   const createCommentMutation = useCreateComment(issueId);
+  const resendCommentMutation = useResendComment(issueId);
   const updateCommentMutation = useUpdateComment(issueId);
   const deleteCommentMutation = useDeleteComment(issueId);
   const toggleReactionMutation = useToggleCommentReaction(issueId);
@@ -261,6 +263,22 @@ export function useIssueTimeline(issueId: string, userId?: string) {
     [deleteCommentMutation],
   );
 
+  const resendComment = useCallback(
+    async (commentId: string) => {
+      try {
+        const result = await resendCommentMutation.mutateAsync(commentId);
+        if (result.queued > 0) {
+          toast.success(result.queued === 1 ? "Resent to 1 agent" : `Resent to ${result.queued} agents`);
+          return;
+        }
+        toast.error("No available agent to resend to");
+      } catch {
+        toast.error("Failed to resend comment");
+      }
+    },
+    [resendCommentMutation],
+  );
+
   // --- Optimistic UI derivation for comment reactions ---
   // Instead of writing temp data into the cache (which races with WS events),
   // derive optimistic state at render time from pending mutation variables.
@@ -339,6 +357,7 @@ export function useIssueTimeline(issueId: string, userId?: string) {
     submitComment,
     submitReply,
     editComment,
+    resendComment,
     deleteComment,
     toggleReaction,
   };

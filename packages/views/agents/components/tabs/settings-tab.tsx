@@ -136,7 +136,7 @@ export function SettingsTab({
         <Input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="用一句话说明这个专家负责什么"
+          placeholder="用一句话说明这个数字员工负责什么"
           className="mt-1"
         />
       </div>

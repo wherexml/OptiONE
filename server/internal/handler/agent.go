@@ -28,6 +28,7 @@ type AgentResponse struct {
 	MaxConcurrentTasks int32           `json:"max_concurrent_tasks"`
 	OwnerID            *string         `json:"owner_id"`
 	Skills             []SkillResponse `json:"skills"`
+	Triggers           any             `json:"triggers"`
 	CreatedAt          string          `json:"created_at"`
 	UpdatedAt          string          `json:"updated_at"`
 	ArchivedAt         *string         `json:"archived_at"`
@@ -41,6 +42,14 @@ func agentToResponse(a db.Agent) AgentResponse {
 	}
 	if rc == nil {
 		rc = map[string]any{}
+	}
+
+	var triggers any
+	if a.Triggers != nil {
+		json.Unmarshal(a.Triggers, &triggers)
+	}
+	if triggers == nil {
+		triggers = []any{}
 	}
 
 	return AgentResponse{
@@ -58,6 +67,7 @@ func agentToResponse(a db.Agent) AgentResponse {
 		MaxConcurrentTasks: a.MaxConcurrentTasks,
 		OwnerID:            uuidToPtr(a.OwnerID),
 		Skills:             []SkillResponse{},
+		Triggers:           triggers,
 		CreatedAt:          timestampToString(a.CreatedAt),
 		UpdatedAt:          timestampToString(a.UpdatedAt),
 		ArchivedAt:         timestampToPtr(a.ArchivedAt),
@@ -247,6 +257,7 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 	if req.RuntimeConfig == nil {
 		rc = []byte("{}")
 	}
+	triggers := []byte("[]")
 
 	agent, err := h.Queries.CreateAgent(r.Context(), db.CreateAgentParams{
 		WorkspaceID:        parseUUID(workspaceID),
@@ -260,6 +271,7 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		Visibility:         req.Visibility,
 		MaxConcurrentTasks: req.MaxConcurrentTasks,
 		OwnerID:            parseUUID(ownerID),
+		Triggers:           triggers,
 	})
 	if err != nil {
 		slog.Warn("create agent failed", append(logger.RequestAttrs(r), "error", err, "workspace_id", workspaceID)...)
@@ -291,6 +303,7 @@ type UpdateAgentRequest struct {
 	Visibility         *string `json:"visibility"`
 	Status             *string `json:"status"`
 	MaxConcurrentTasks *int32  `json:"max_concurrent_tasks"`
+	Triggers           any     `json:"triggers"`
 }
 
 // canManageAgent checks whether the current user can update or archive an agent.
@@ -366,6 +379,10 @@ func (h *Handler) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.MaxConcurrentTasks != nil {
 		params.MaxConcurrentTasks = pgtype.Int4{Int32: *req.MaxConcurrentTasks, Valid: true}
+	}
+	if req.Triggers != nil {
+		tr, _ := json.Marshal(req.Triggers)
+		params.Triggers = tr
 	}
 
 	agent, err := h.Queries.UpdateAgent(r.Context(), params)

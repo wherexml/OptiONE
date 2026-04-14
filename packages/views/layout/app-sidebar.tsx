@@ -329,7 +329,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle, 
                   <DropdownMenuGroup>
                     <DropdownMenuItem variant="destructive" onClick={logout}>
                       <LogOut className="h-3.5 w-3.5" />
-                      Log out
+                      {isZh ? "退出" : "Log out"}
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                 </DropdownMenuContent>
@@ -351,7 +351,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle, 
                   <SquarePen />
                   <DraftDot />
                 </span>
-                <span>新建决策单</span>
+                <span>新建任务</span>
                 <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">C</kbd>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -483,7 +483,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle, 
                 <DropdownMenuContent align="end" side="top" sideOffset={4}>
                   <DropdownMenuItem variant="destructive" onClick={logout}>
                     <LogOut className="h-3.5 w-3.5" />
-                    Log out
+                    {isZh ? "退出" : "Log out"}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

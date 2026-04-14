@@ -257,7 +257,7 @@ export function DecisionMetaSummary({
     <Card className={className}>
       <CardHeader>
         <CardTitle>{t("decision")}概况</CardTitle>
-        <CardDescription>当前决策单已接入的核心元信息。</CardDescription>
+        <CardDescription>当前任务已接入的核心元信息。</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3 md:grid-cols-3">
         <DecisionMetricCard label={t("decisionType")} value={decision.decision_type || "未设置"} />

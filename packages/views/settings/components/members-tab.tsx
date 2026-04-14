@@ -276,7 +276,9 @@ export function MembersTab() {
                   placeholder={translate("settings.members.fields.emailPlaceholder")}
                 />
                 <Select value={inviteRole} onValueChange={(value) => setInviteRole(value as MemberRole)}>
-                  <SelectTrigger size="sm"><SelectValue /></SelectTrigger>
+                  <SelectTrigger size="sm">
+                    <SelectValue>{roleConfig[inviteRole].label}</SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="member">{roleConfig.member.label}</SelectItem>
                     <SelectItem value="admin">{roleConfig.admin.label}</SelectItem>

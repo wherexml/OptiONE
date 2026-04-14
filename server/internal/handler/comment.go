@@ -377,6 +377,24 @@ func (h *Handler) enqueueMentionedAgentTasks(ctx context.Context, issue db.Issue
 	if parentComment != nil && len(mentions) == 0 {
 		mentions = util.ParseMentions(parentComment.Content)
 	}
+	replyTo := comment.ID
+	if comment.ParentID.Valid {
+		replyTo = comment.ParentID
+	}
+	h.enqueueAgentMentions(ctx, issue, mentions, replyTo, wsID, authorType, authorID, true)
+}
+
+func (h *Handler) enqueueAgentMentions(
+	ctx context.Context,
+	issue db.Issue,
+	mentions []util.Mention,
+	triggerCommentID pgtype.UUID,
+	workspaceID string,
+	authorType string,
+	authorID string,
+	dedupePending bool,
+) int {
+	queued := 0
 	for _, m := range mentions {
 		if m.Type != "agent" {
 			continue
@@ -395,29 +413,80 @@ func (h *Handler) enqueueMentionedAgentTasks(ctx context.Context, issue db.Issue
 		if agent.Visibility == "private" && authorType == "member" {
 			isOwner := uuidToString(agent.OwnerID) == authorID
 			if !isOwner {
-				member, err := h.getWorkspaceMember(ctx, authorID, wsID)
+				member, err := h.getWorkspaceMember(ctx, authorID, workspaceID)
 				if err != nil || !roleAllowed(member.Role, "owner", "admin") {
 					continue
 				}
 			}
 		}
-		// Dedup: skip if this agent already has a pending task for this issue.
-		hasPending, err := h.Queries.HasPendingTaskForIssueAndAgent(ctx, db.HasPendingTaskForIssueAndAgentParams{
-			IssueID: issue.ID,
-			AgentID: agentUUID,
-		})
-		if err != nil || hasPending {
+		if dedupePending {
+			hasPending, err := h.Queries.HasPendingTaskForIssueAndAgent(ctx, db.HasPendingTaskForIssueAndAgentParams{
+				IssueID: issue.ID,
+				AgentID: agentUUID,
+			})
+			if err != nil || hasPending {
+				continue
+			}
+		}
+		if _, err := h.TaskService.EnqueueTaskForMention(ctx, issue, agentUUID, triggerCommentID); err != nil {
+			slog.Warn("enqueue mention agent task failed", "issue_id", uuidToString(issue.ID), "agent_id", m.ID, "error", err)
 			continue
 		}
-		// Resolve thread root for reply threading.
-		replyTo := comment.ID
-		if comment.ParentID.Valid {
-			replyTo = comment.ParentID
-		}
-		if _, err := h.TaskService.EnqueueTaskForMention(ctx, issue, agentUUID, replyTo); err != nil {
-			slog.Warn("enqueue mention agent task failed", "issue_id", uuidToString(issue.ID), "agent_id", m.ID, "error", err)
+		queued++
+	}
+	return queued
+}
+
+func (h *Handler) ResendComment(w http.ResponseWriter, r *http.Request) {
+	commentID := chi.URLParam(r, "commentId")
+
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	workspaceID := resolveWorkspaceID(r)
+	comment, err := h.Queries.GetCommentInWorkspace(r.Context(), db.GetCommentInWorkspaceParams{
+		ID:          parseUUID(commentID),
+		WorkspaceID: parseUUID(workspaceID),
+	})
+	if err != nil {
+		writeError(w, http.StatusNotFound, "comment not found")
+		return
+	}
+
+	issue, err := h.Queries.GetIssueInWorkspace(r.Context(), db.GetIssueInWorkspaceParams{
+		ID:          comment.IssueID,
+		WorkspaceID: parseUUID(workspaceID),
+	})
+	if err != nil {
+		writeError(w, http.StatusNotFound, "issue not found")
+		return
+	}
+
+	actorType, actorID := h.resolveActor(r, userID, workspaceID)
+	mentions := util.ParseMentions(comment.Content)
+	agentMentions := make([]util.Mention, 0, len(mentions))
+	for _, mention := range mentions {
+		if mention.Type == "agent" {
+			agentMentions = append(agentMentions, mention)
 		}
 	}
+	if len(agentMentions) == 0 {
+		writeError(w, http.StatusBadRequest, "comment has no agent mentions")
+		return
+	}
+
+	triggerCommentID := comment.ID
+	if comment.ParentID.Valid {
+		triggerCommentID = comment.ParentID
+	}
+
+	queued := h.enqueueAgentMentions(r.Context(), issue, agentMentions, triggerCommentID, workspaceID, actorType, actorID, false)
+	writeJSON(w, http.StatusOK, map[string]int{
+		"mentioned": len(agentMentions),
+		"queued":    queued,
+	})
 }
 
 func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {

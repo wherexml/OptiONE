@@ -33,6 +33,19 @@ Core workflow: `open <url>` → `snapshot -i` → `click/fill` → 重新 snapsh
 
 **Multica** — AI 原生任务管理平台（类 Linear，AI Agent 是第一等公民）。目标用户：2-10 人 AI 原生团队。
 
+## 团队成员映射
+
+| Git 用户名 | 中文名+英文名 |
+|------------|---------------|
+| wherexml | 许茂林 (Steve) |
+| snowzh | SnowZh |
+| joevic9 | 刘容舟 (Joe) |
+| jjonakYu | 姚尚宇 (JJONAK) |
+| Kevin-Kim0102 | 金天韵 (kevin) |
+| hHuo07 | 宋媛焱 (Seren) |
+
+> 来源：[wherexml/optimax](https://github.com/wherexml/optimax) 仓库协作者
+
 ## 技术架构
 
 **Go 后端 + Next.js 前端。**
@@ -191,6 +204,31 @@ make check            # 全部：类型检查 + 单元测试 + Go 测试 + E2E
 | 部署相关 | deployment.md → DEPLOY_CONTAINER.md |
 | CLI/Daemon 问题 | CLI_AND_DAEMON.md |
 | 上游同步 | local_modify.md |
+
+---
+
+## 开发环境端口偏好
+
+**本地开发环境使用 Docker + OrbStack 部署，端口映射如下：**
+
+| 服务 | 容器端口 | 宿主机端口 | 访问地址 |
+| --- | --- | --- | --- |
+| 前端 (Next.js) | 3000 | **22202** | http://localhost:22202 |
+| 后端 (Go) | 8080 | **8080** | http://localhost:8080 |
+| PostgreSQL | 5432 | **22200** | postgres://localhost:22200 |
+
+**Docker 容器名称：**
+- `multica-frontend-1` — 前端
+- `multica-backend-1` — 后端
+- `multica-postgres-1` — 数据库
+
+**重要：** 测试登录或 API 时，使用 `http://localhost:22202` 访问前端，`http://localhost:8080` 直接访问后端。
+
+**本地部署测试账号：**
+- Email: `admin@local`
+- Password: `admin123`
+
+修改代码后需要重新部署：`docker compose up -d --build frontend` 或 `make start`
 
 ---
 

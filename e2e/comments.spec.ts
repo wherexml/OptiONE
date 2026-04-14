@@ -28,7 +28,7 @@ test.describe("Comments", () => {
     // Type a comment
     const commentText = "E2E comment " + Date.now();
     const commentInput = page.locator(
-      'input[placeholder="Leave a comment..."]',
+      'input[placeholder="写下评论..."]',
     );
     await commentInput.fill(commentText);
 

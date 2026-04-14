@@ -65,6 +65,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@multica/ui/components/ui/alert-dialog";
+import { getProjectIconValue } from "./project-icon";
 
 // ---------------------------------------------------------------------------
 // Property row — sidebar property display
@@ -572,7 +573,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                         className="text-2xl cursor-pointer rounded-lg p-1 -ml-1 hover:bg-accent/60 transition-colors"
                         title="更换图标"
                       >
-                        {project.icon || "📁"}
+                        {getProjectIconValue(project.icon)}
                       </button>
                     }
                   />

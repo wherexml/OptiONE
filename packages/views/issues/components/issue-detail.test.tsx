@@ -1,4 +1,4 @@
-import { forwardRef, useRef, useState, useImperativeHandle } from "react";
+import { cloneElement, createContext, forwardRef, isValidElement, useContext, useImperativeHandle, useRef, useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -159,6 +159,7 @@ const mockApiObj = vi.hoisted(() => ({
   listTimeline: vi.fn().mockResolvedValue([]),
   listComments: vi.fn().mockResolvedValue([]),
   createComment: vi.fn(),
+  resendComment: vi.fn().mockResolvedValue({ mentioned: 1, queued: 1 }),
   updateComment: vi.fn(),
   deleteComment: vi.fn(),
   deleteIssue: vi.fn(),
@@ -281,6 +282,53 @@ vi.mock("react-resizable-panels", () => ({
   useDefaultLayout: () => ({ defaultLayout: undefined, onLayoutChanged: vi.fn() }),
   usePanelRef: () => ({ current: { isCollapsed: () => false, expand: vi.fn(), collapse: vi.fn() } }),
 }));
+
+vi.mock("@multica/ui/components/ui/dropdown-menu", () => {
+  const DropdownMenuContext = createContext<{ open: boolean; setOpen: (open: boolean) => void } | null>(null);
+
+  return {
+    DropdownMenu: ({ children }: { children: React.ReactNode }) => {
+      const [open, setOpen] = useState(false);
+      return (
+        <DropdownMenuContext.Provider value={{ open, setOpen }}>
+          <div>{children}</div>
+        </DropdownMenuContext.Provider>
+      );
+    },
+    DropdownMenuTrigger: ({ children, render, onClick, ...props }: any) => {
+      const ctx = useContext(DropdownMenuContext);
+      const triggerProps = {
+        ...props,
+        onClick: (event: any) => {
+          onClick?.(event);
+          ctx?.setOpen(!ctx.open);
+        },
+      };
+      if (render && isValidElement(render)) {
+        return cloneElement(render, triggerProps, children);
+      }
+      return <button type="button" {...triggerProps}>{children}</button>;
+    },
+    DropdownMenuContent: ({ children }: { children: React.ReactNode }) => {
+      const ctx = useContext(DropdownMenuContext);
+      if (!ctx?.open) return null;
+      return <div>{children}</div>;
+    },
+    DropdownMenuItem: ({ children, onClick, ...props }: any) => (
+      <button type="button" onClick={onClick} {...props}>
+        {children}
+      </button>
+    ),
+    DropdownMenuSub: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    DropdownMenuSubTrigger: ({ children, ...props }: any) => (
+      <button type="button" {...props}>
+        {children}
+      </button>
+    ),
+    DropdownMenuSubContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    DropdownMenuSeparator: () => <div data-testid="dropdown-separator" />,
+  };
+});
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -531,6 +579,94 @@ describe("IssueDetail (shared)", () => {
     });
 
     expect(screen.getByText("I can help with this")).toBeInTheDocument();
+  });
+
+  it("shows resend in comment actions when the comment explicitly mentions an agent", async () => {
+    mockApiObj.listTimeline.mockResolvedValue([
+      {
+        type: "comment",
+        id: "comment-agent-1",
+        actor_type: "member",
+        actor_id: "user-1",
+        content: "[@Claude Agent](mention://agent/agent-1) please retry this",
+        parent_id: null,
+        created_at: "2026-01-16T00:00:00Z",
+        updated_at: "2026-01-16T00:00:00Z",
+        comment_type: "comment",
+      },
+    ]);
+
+    const user = (await import("@testing-library/user-event")).default;
+    renderIssueDetail();
+
+    await waitFor(() => {
+      expect(screen.getByText("[@Claude Agent](mention://agent/agent-1) please retry this")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Comment actions" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Resend")).toBeInTheDocument();
+    });
+  });
+
+  it("resends the comment instruction when clicking resend", async () => {
+    mockApiObj.listTimeline.mockResolvedValue([
+      {
+        type: "comment",
+        id: "comment-agent-2",
+        actor_type: "member",
+        actor_id: "user-1",
+        content: "[@Claude Agent](mention://agent/agent-1) please retry this",
+        parent_id: null,
+        created_at: "2026-01-16T00:00:00Z",
+        updated_at: "2026-01-16T00:00:00Z",
+        comment_type: "comment",
+      },
+    ]);
+
+    const user = (await import("@testing-library/user-event")).default;
+    renderIssueDetail();
+
+    await waitFor(() => {
+      expect(screen.getByText("[@Claude Agent](mention://agent/agent-1) please retry this")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Comment actions" }));
+    await user.click(await screen.findByText("Resend"));
+
+    await waitFor(() => {
+      expect(mockApiObj.resendComment).toHaveBeenCalledWith("comment-agent-2");
+    });
+  });
+
+  it("hides resend when the comment has no explicit agent mention", async () => {
+    mockApiObj.listTimeline.mockResolvedValue([
+      {
+        type: "comment",
+        id: "comment-plain-1",
+        actor_type: "member",
+        actor_id: "user-1",
+        content: "Just a regular update",
+        parent_id: null,
+        created_at: "2026-01-16T00:00:00Z",
+        updated_at: "2026-01-16T00:00:00Z",
+        comment_type: "comment",
+      },
+    ]);
+
+    const user = (await import("@testing-library/user-event")).default;
+    renderIssueDetail();
+
+    await waitFor(() => {
+      expect(screen.getByText("Just a regular update")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Comment actions" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Resend")).not.toBeInTheDocument();
+    });
   });
 
   it("shows only the overview tab when the issue has no decision metadata", async () => {

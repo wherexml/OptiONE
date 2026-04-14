@@ -244,9 +244,9 @@ function useIssueCounts(allIssues: Issue[]) {
 // ---------------------------------------------------------------------------
 
 const SCOPES: { value: IssuesScope; label: string; description: string }[] = [
-  { value: "all", label: "All", description: "All issues in this workspace" },
-  { value: "members", label: "Members", description: "Issues assigned to team members" },
-  { value: "agents", label: "Agents", description: "Issues assigned to AI agents" },
+  { value: "all", label: "全部", description: "查看当前业务空间内的全部任务" },
+  { value: "members", label: "成员", description: "查看分配给团队成员的任务" },
+  { value: "agents", label: "数字员工", description: "查看分配给数字员工的任务" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -348,7 +348,7 @@ function ActorSubContent({
 
         {filteredAgents.length > 0 && (
           <DropdownMenuGroup>
-            <DropdownMenuLabel>专家 Agent</DropdownMenuLabel>
+            <DropdownMenuLabel>数字员工</DropdownMenuLabel>
             {filteredAgents.map((a) => {
               const checked = isSelected("agent", a.id);
               const count = counts.get(`agent:${a.id}`) ?? 0;

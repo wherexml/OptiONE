@@ -278,6 +278,79 @@ func TestCommentTriggerOnComment(t *testing.T) {
 	})
 }
 
+func TestResendCommentMention(t *testing.T) {
+	agentID := getAgentID(t)
+	issueID := createIssue(t, "Resend mentioned agent instruction")
+	t.Cleanup(func() {
+		clearTasks(t, issueID)
+		resp := authRequest(t, "DELETE", "/api/issues/"+issueID, nil)
+		resp.Body.Close()
+	})
+
+	commentID := postComment(
+		t,
+		issueID,
+		fmt.Sprintf("[@Agent](mention://agent/%s) please take another look", agentID),
+		nil,
+	)
+
+	clearTasks(t, issueID)
+
+	t.Run("queues the mentioned agent again", func(t *testing.T) {
+		resp := authRequest(t, "POST", "/api/comments/"+commentID+"/resend", nil)
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			t.Fatalf("ResendComment: expected 200, got %d: %s", resp.StatusCode, body)
+		}
+
+		var result struct {
+			Mentioned int `json:"mentioned"`
+			Queued    int `json:"queued"`
+		}
+		readJSON(t, resp, &result)
+		if result.Mentioned != 1 || result.Queued != 1 {
+			t.Fatalf("unexpected resend result: %+v", result)
+		}
+
+		if n := countPendingTasks(t, issueID); n != 1 {
+			t.Fatalf("expected 1 pending task after resend, got %d", n)
+		}
+	})
+
+	t.Run("bypasses pending-task dedup so resend always requeues", func(t *testing.T) {
+		resp := authRequest(t, "POST", "/api/comments/"+commentID+"/resend", nil)
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			t.Fatalf("ResendComment second call: expected 200, got %d: %s", resp.StatusCode, body)
+		}
+		resp.Body.Close()
+
+		if n := countPendingTasks(t, issueID); n != 2 {
+			t.Fatalf("expected 2 pending tasks after second resend, got %d", n)
+		}
+	})
+}
+
+func TestResendCommentRejectsCommentsWithoutAgentMentions(t *testing.T) {
+	issueID := createIssue(t, "Resend validation")
+	t.Cleanup(func() {
+		resp := authRequest(t, "DELETE", "/api/issues/"+issueID, nil)
+		resp.Body.Close()
+	})
+
+	commentID := postComment(t, issueID, "Just a status update", nil)
+
+	resp := authRequest(t, "POST", "/api/comments/"+commentID+"/resend", nil)
+	if resp.StatusCode != http.StatusBadRequest {
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		t.Fatalf("ResendComment without mentions: expected 400, got %d: %s", resp.StatusCode, body)
+	}
+	resp.Body.Close()
+}
+
 // TestCommentTriggerAtAllSuppression verifies that @all mentions do not
 // trigger agent execution — @all is a broadcast, not a direct request.
 func TestCommentTriggerAtAllSuppression(t *testing.T) {

@@ -64,7 +64,7 @@ export function CreateAgentDialog({
       });
       onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "创建专家失败");
+      toast.error(err instanceof Error ? err.message : "创建数字员工失败");
       setCreating(false);
     }
   };
@@ -73,9 +73,9 @@ export function CreateAgentDialog({
     <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>创建专家</DialogTitle>
+          <DialogTitle>创建数字员工</DialogTitle>
           <DialogDescription>
-            为当前工作区创建一个新的专家。
+            为当前工作区创建一个新的数字员工。
           </DialogDescription>
         </DialogHeader>
 
@@ -87,7 +87,7 @@ export function CreateAgentDialog({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="例如：采购策略专家"
+              placeholder="例如：采购策略数字员工"
               className="mt-1"
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
             />
@@ -99,7 +99,7 @@ export function CreateAgentDialog({
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="这个专家主要负责什么？"
+              placeholder="这个数字员工主要负责什么？"
               className="mt-1"
             />
           </div>
@@ -166,7 +166,7 @@ export function CreateAgentDialog({
                     )}
                   </div>
                   <div className="truncate text-xs text-muted-foreground">
-                    {selectedRuntime?.device_info ?? "请先注册运行时，再创建专家"}
+                    {selectedRuntime?.device_info ?? "请先注册运行时，再创建数字员工"}
                   </div>
                 </div>
                 <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${runtimeOpen ? "rotate-180" : ""}`} />

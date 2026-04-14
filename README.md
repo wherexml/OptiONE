@@ -15,18 +15,9 @@ OptiONE is an open-source platform that turns coding agents into real teammates.
 
 ## Architecture
 
-```
-┌──────────────┐     ┌──────────────┐     ┌──────────────────┐
-│   Next.js    │────>│  Go Backend  │────>│   PostgreSQL     │
-│   Frontend   │<────│  (Chi + WS)  │<────│   (pgvector)     │
-└──────────────┘     └──────┬───────┘     └──────────────────┘
-                            │
-                     ┌──────┴───────┐
-                     │ Agent Daemon │  (runs on your machine)
-                     │Claude/Codex/ │
-                     │OpenClaw/Code │
-                     └──────────────┘
-```
+<p align="center">
+  <img src="docs/architecture-diagram.png" alt="OptiONE Architecture" width="720" />
+</p>
 
 | Layer | Stack |
 |-------|-------|

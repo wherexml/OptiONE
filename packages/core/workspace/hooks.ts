@@ -1,28 +1,36 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { getClientLocale } from "../platform";
 import { useWorkspaceId } from "../hooks";
 import { memberListOptions, agentListOptions } from "./queries";
 
+function localizeAgentName(name: string, locale: string): string {
+  if (locale !== "zh-CN") return name;
+  return name.replace(/\s*Agent$/, " 数字员工");
+}
+
 export function useActorName() {
   const wsId = useWorkspaceId();
+  const locale = getClientLocale();
+  const isZh = locale === "zh-CN";
   const { data: members = [] } = useQuery(memberListOptions(wsId));
   const { data: agents = [] } = useQuery(agentListOptions(wsId));
 
   const getMemberName = (userId: string) => {
     const m = members.find((m) => m.user_id === userId);
-    return m?.name ?? "Unknown";
+    return m?.name ?? (isZh ? "未知成员" : "Unknown");
   };
 
   const getAgentName = (agentId: string) => {
     const a = agents.find((a) => a.id === agentId);
-    return a?.name ?? "Unknown Agent";
+    return a ? localizeAgentName(a.name, locale) : (isZh ? "未知数字员工" : "Unknown Agent");
   };
 
   const getActorName = (type: string, id: string) => {
     if (type === "member") return getMemberName(id);
     if (type === "agent") return getAgentName(id);
-    return "System";
+    return isZh ? "系统" : "System";
   };
 
   const getActorInitials = (type: string, id: string) => {

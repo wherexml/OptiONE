@@ -236,12 +236,15 @@ describe("AppSidebar", () => {
 
     expect(screen.getByText("工作台")).toBeInTheDocument();
     expect(screen.getByText("我的待办")).toBeInTheDocument();
-    expect(screen.getByText("决策单中心")).toBeInTheDocument();
+    expect(screen.getByText("所有任务")).toBeInTheDocument();
     expect(screen.getByText("项目中心")).toBeInTheDocument();
-    expect(screen.getByText("专家 Agent")).toBeInTheDocument();
+    expect(screen.getByText("数字员工")).toBeInTheDocument();
     expect(screen.getByText("执行环境")).toBeInTheDocument();
     expect(screen.getByText("技能包")).toBeInTheDocument();
-    expect(screen.getByText("平台设置")).toBeInTheDocument();
+    expect(
+      screen.getByText((_, el) => el?.textContent === "设置" && el?.tagName === "SPAN"),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("退出").length).toBeGreaterThan(0);
     expect(screen.queryByText("Inbox")).not.toBeInTheDocument();
   });
 

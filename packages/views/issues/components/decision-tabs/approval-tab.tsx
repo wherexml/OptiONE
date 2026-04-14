@@ -19,7 +19,7 @@ import {
 } from "./shared";
 
 const APPROVAL_FLOW_STEPS = [
-  { id: "draft", label: "草拟决策单" },
+  { id: "draft", label: "草拟任务" },
   { id: "pending", label: "提交审批" },
   { id: "approved", label: "审批结果" },
 ] as const;
@@ -64,7 +64,7 @@ export function ApprovalTab({ issueId }: { issueId: string }) {
       <Card>
         <CardHeader>
           <CardTitle>当前审批状态</CardTitle>
-          <CardDescription>直接读取决策单主记录上的 `approval_status`。</CardDescription>
+          <CardDescription>直接读取任务主记录上的 `approval_status`。</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">

@@ -11,13 +11,13 @@ import {
   useArchiveAllReadInbox,
   useArchiveCompletedInbox,
   useArchiveInbox,
+  useConvertAlertToDecision,
   useMarkAllInboxRead,
   useMarkInboxRead,
 } from "@multica/core/inbox/mutations";
 import { inboxListOptions } from "@multica/core/inbox/queries";
-import { useModalStore } from "@multica/core/modals";
 import { t } from "@multica/core/platform";
-import type { InboxItem } from "@multica/core/types";
+import type { InboxItem, Issue } from "@multica/core/types";
 import { Button } from "@multica/ui/components/ui/button";
 import {
   DropdownMenu,
@@ -52,7 +52,7 @@ import { getRecentActivityItems } from "./inbox-dashboard-helpers";
 import { timeAgo } from "./inbox-list-item";
 
 export function InboxPage() {
-  const { push, replace, searchParams } = useNavigation();
+  const { replace, searchParams } = useNavigation();
   const urlIssue = searchParams.get("issue") ?? "";
   const user = useAuthStore((state) => state.user);
   const wsId = useWorkspaceId();
@@ -102,13 +102,18 @@ export function InboxPage() {
   });
 
   const recentItems = useMemo(() => getRecentActivityItems(rawItems), [rawItems]);
-  const selected = useMemo(
+  const selectedInboxItem = useMemo(
     () =>
       recentItems.find((item) => (item.issue_id ?? item.id) === selectedKey) ??
       rawItems.find((item) => item.id === selectedKey) ??
       null,
     [rawItems, recentItems, selectedKey],
   );
+  const selectedTodo = useMemo<Issue | null>(
+    () => myIssues.find((issue) => issue.id === selectedKey) ?? null,
+    [myIssues, selectedKey],
+  );
+  const selectedIssueId = selectedInboxItem?.issue_id ?? selectedTodo?.id ?? "";
   const unreadCount = useMemo(
     () => rawItems.filter((item) => !item.archived && !item.read).length,
     [rawItems],
@@ -124,6 +129,7 @@ export function InboxPage() {
   const archiveAllMutation = useArchiveAllInbox();
   const archiveAllReadMutation = useArchiveAllReadInbox();
   const archiveCompletedMutation = useArchiveCompletedInbox();
+  const convertAlertMutation = useConvertAlertToDecision();
 
   const handleSelect = useCallback(
     (item: InboxItem) => {
@@ -184,18 +190,41 @@ export function InboxPage() {
     });
   }, [archiveCompletedMutation, setSelectedKey]);
 
-  const handleCreateDecision = useCallback(() => {
-    push("/issues");
-    queueMicrotask(() => {
-      useModalStore.getState().open("create-issue");
-    });
-  }, [push]);
-
-  const handleOpenIssue = useCallback(
+  const handleSelectIssue = useCallback(
     (issueId: string) => {
-      push(`/issues/${issueId}`);
+      setSelectedKey(issueId);
     },
-    [push],
+    [setSelectedKey],
+  );
+
+  const handleOpenDecision = useCallback(
+    (item: InboxItem) => {
+      handleSelect(item);
+    },
+    [handleSelect],
+  );
+
+  const handleConvertAlert = useCallback(
+    (item: InboxItem) => {
+      if (!item.issue_id) {
+        handleSelect(item);
+        return;
+      }
+
+      convertAlertMutation.mutate(item.id, {
+        onSuccess: (decision) => {
+          if (!item.read) {
+            markReadMutation.mutate(item.id, {
+              onError: () => toast.error("标记已读失败"),
+            });
+          }
+          setSelectedKey(decision.id);
+          toast.success(`已生成${t("decision")}单`);
+        },
+        onError: () => toast.error(`生成${t("decision")}单失败`),
+      });
+    },
+    [convertAlertMutation, handleSelect, markReadMutation, setSelectedKey],
   );
 
   const listHeader = (
@@ -244,31 +273,31 @@ export function InboxPage() {
     </div>
   );
 
-  const detailContent = selected?.issue_id ? (
+  const detailContent = selectedIssueId ? (
     <IssueDetail
-      key={selected.id}
-      issueId={selected.issue_id}
+      key={selectedIssueId}
+      issueId={selectedIssueId}
       defaultSidebarOpen={false}
       layoutId="multica_inbox_issue_detail_layout"
-      highlightCommentId={selected.details?.comment_id ?? undefined}
-      onDelete={() => handleArchive(selected.id)}
+      highlightCommentId={selectedInboxItem?.details?.comment_id ?? undefined}
+      onDelete={selectedInboxItem ? () => handleArchive(selectedInboxItem.id) : undefined}
     />
-  ) : selected ? (
+  ) : selectedInboxItem ? (
     <div className="p-6">
-      <h2 className="text-lg font-semibold">{selected.title}</h2>
+      <h2 className="text-lg font-semibold">{selectedInboxItem.title}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        {typeLabels[selected.type]} · {timeAgo(selected.created_at)}
+        {typeLabels[selectedInboxItem.type]} · {timeAgo(selectedInboxItem.created_at)}
       </p>
-      {selected.body && (
+      {selectedInboxItem.body && (
         <div className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-foreground/80">
-          {selected.body}
+          {selectedInboxItem.body}
         </div>
       )}
       <div className="mt-4">
         <Button
           variant="outline"
           size="sm"
-          onClick={() => handleArchive(selected.id)}
+          onClick={() => handleArchive(selectedInboxItem.id)}
         >
           <Archive className="mr-1.5 h-3.5 w-3.5" />
           归档
@@ -288,13 +317,14 @@ export function InboxPage() {
       selectedKey={selectedKey}
       onSelectItem={handleSelect}
       onArchiveItem={handleArchive}
-      onCreateDecision={handleCreateDecision}
-      onOpenIssue={handleOpenIssue}
+      onOpenDecision={handleOpenDecision}
+      onConvertAlert={handleConvertAlert}
+      onSelectIssue={handleSelectIssue}
     />
   );
 
   if (isMobile) {
-    if (selected) {
+    if (selectedInboxItem || selectedTodo) {
       return (
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex h-12 shrink-0 items-center border-b px-2">
@@ -343,7 +373,7 @@ export function InboxPage() {
       <ResizableHandle />
       <ResizablePanel id="detail" minSize="35%">
         <div className="flex h-full min-h-0 flex-col">
-          {inboxLoading && !selected ? (
+          {inboxLoading && !selectedInboxItem && !selectedTodo ? (
             <div className="p-6">
               <Skeleton className="h-6 w-40" />
               <Skeleton className="mt-4 h-4 w-28" />

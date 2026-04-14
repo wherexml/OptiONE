@@ -6,9 +6,20 @@ import { resolve } from "path";
 config({ path: resolve(__dirname, "../../.env") });
 
 // Client-side (NEXT_PUBLIC_): empty = use relative URLs (go through Next.js rewrites)
-// Server-side rewrites: use BACKEND_REWRITE_URL (Docker internal hostname)
-const backendPort = process.env.PORT || "8080";
-const remoteApiUrl = process.env.BACKEND_REWRITE_URL || `http://localhost:${backendPort}`;
+// Server-side rewrites must target the backend service, not the frontend's own PORT.
+export function resolveRemoteApiUrl(env: NodeJS.ProcessEnv = process.env): string {
+  if (env.BACKEND_REWRITE_URL) {
+    return env.BACKEND_REWRITE_URL;
+  }
+
+  if (env.NODE_ENV === "development") {
+    return `http://localhost:${env.BACKEND_PORT || "8080"}`;
+  }
+
+  return "http://backend:8080";
+}
+
+const remoteApiUrl = resolveRemoteApiUrl();
 
 const nextConfig: NextConfig = {
   output: "standalone",

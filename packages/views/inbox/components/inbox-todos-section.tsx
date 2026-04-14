@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@multica/ui/components/ui/card";
 import { Skeleton } from "@multica/ui/components/ui/skeleton";
+import { cn } from "@multica/ui/lib/utils";
 import { StatusIcon } from "../../issues/components";
 
 const statusLabelMap = {
@@ -25,13 +26,15 @@ const statusLabelMap = {
 interface InboxTodosSectionProps {
   issues: Issue[];
   isLoading: boolean;
-  onOpenIssue: (issueId: string) => void;
+  selectedIssueId: string;
+  onSelectIssue: (issueId: string) => void;
 }
 
 export function InboxTodosSection({
   issues,
   isLoading,
-  onOpenIssue,
+  selectedIssueId,
+  onSelectIssue,
 }: InboxTodosSectionProps) {
   return (
     <section className="space-y-3">
@@ -70,8 +73,11 @@ export function InboxTodosSection({
               <button
                 key={issue.id}
                 type="button"
-                onClick={() => onOpenIssue(issue.id)}
-                className="flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-3 text-left transition-colors hover:bg-accent/50"
+                onClick={() => onSelectIssue(issue.id)}
+                className={cn(
+                  "flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-3 text-left transition-colors hover:bg-accent/50",
+                  selectedIssueId === issue.id && "border-primary/30 bg-accent/60",
+                )}
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -84,7 +90,7 @@ export function InboxTodosSection({
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <StatusIcon status={issue.status} className="h-4 w-4" />
-                  <span className="text-xs text-muted-foreground">打开</span>
+                  <span className="text-xs text-muted-foreground">展开</span>
                 </div>
               </button>
             ))}

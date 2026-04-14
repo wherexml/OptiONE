@@ -15,7 +15,7 @@ describe("message loader", () => {
 
     expect(messages.common.save).toBe("保存");
     expect(messages.navigation.inbox).toBe("工作台");
-    expect(messages.settings.title).toBe("平台设置");
+    expect(messages.settings.title).toBe("设置");
   });
 
   it("fills missing nested keys from the en-US fallback bundle", () => {

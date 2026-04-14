@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Minus, Maximize2, Minimize2, Send, ChevronDown, Bot, Plus, History } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@multica/ui/components/ui/avatar";
+import { Minus, Maximize2, Minimize2, Send, ChevronDown, Plus, History } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +25,7 @@ import { useChatStore } from "@multica/core/chat";
 import { ChatMessageList } from "./chat-message-list";
 import { ChatInput } from "./chat-input";
 import { ChatSessionHistory } from "./chat-session-history";
+import { AgentAvatar } from "../../common/agent-avatar";
 import { useWS } from "@multica/core/realtime";
 import type { TaskMessagePayload, ChatDonePayload, Agent, ChatMessage } from "@multica/core/types";
 
@@ -321,7 +321,7 @@ function AgentSelector({
   if (agents.length <= 1) {
     return (
       <div className="flex items-center gap-2">
-        <AgentAvatarSmall agent={activeAgent} />
+        <AgentAvatar agent={activeAgent} size={20} />
         <span className="text-sm font-medium">{activeAgent.name}</span>
       </div>
     );
@@ -330,7 +330,7 @@ function AgentSelector({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex items-center gap-2 rounded-md px-1.5 py-1 -ml-1.5 transition-colors hover:bg-accent">
-        <AgentAvatarSmall agent={activeAgent} />
+        <AgentAvatar agent={activeAgent} size={20} />
         <span className="text-sm font-medium">{activeAgent.name}</span>
         <ChevronDown className="size-3 text-muted-foreground" />
       </DropdownMenuTrigger>
@@ -341,23 +341,12 @@ function AgentSelector({
             onClick={() => onSelect(agent)}
             className="flex items-center gap-2"
           >
-            <AgentAvatarSmall agent={agent} />
+            <AgentAvatar agent={agent} size={20} />
             <span>{agent.name}</span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
-  );
-}
-
-function AgentAvatarSmall({ agent }: { agent: Agent }) {
-  return (
-    <Avatar className="size-5">
-      {agent.avatar_url && <AvatarImage src={agent.avatar_url} />}
-      <AvatarFallback className="bg-purple-100 text-purple-700 text-[10px]">
-        <Bot className="size-3" />
-      </AvatarFallback>
-    </Avatar>
   );
 }
 

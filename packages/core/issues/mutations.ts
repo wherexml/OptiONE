@@ -359,6 +359,16 @@ export function useUpdateComment(issueId: string) {
   });
 }
 
+export function useResendComment(issueId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (commentId: string) => api.resendComment(commentId),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: issueKeys.timeline(issueId) });
+    },
+  });
+}
+
 export function useDeleteComment(issueId: string) {
   const qc = useQueryClient();
   return useMutation({

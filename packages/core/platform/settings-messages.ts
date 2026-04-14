@@ -11,7 +11,7 @@ import {
 const DEFAULT_SETTINGS_LOCALE: LexiconLocale = getDefaultLocale();
 
 const zhCNSettings = {
-  "settings.title": "平台设置",
+  "settings.title": "设置",
   "settings.groups.account": "我的账户",
   "settings.groups.workspace": "业务空间",
   "settings.tabs.profile": "个人资料",
@@ -91,7 +91,7 @@ const zhCNSettings = {
   "settings.workspace.delete.button": "删除业务空间",
   "settings.workspace.delete.loading": "删除中...",
   "settings.workspace.delete.dialogTitle": "删除业务空间",
-  "settings.workspace.delete.dialogDescription": "删除 {name}？此操作不可撤销。所有决策单、专家 Agent 和数据都会被永久删除。",
+  "settings.workspace.delete.dialogDescription": "删除 {name}？此操作不可撤销。所有任务、数字员工和数据都会被永久删除。",
   "settings.workspace.delete.toastFailed": "删除业务空间失败",
   "settings.members.title": "成员管理",
   "settings.members.titleWithCount": "成员管理 ({count})",
@@ -113,9 +113,9 @@ const zhCNSettings = {
   "settings.members.roles.admin.label": "管理员",
   "settings.members.roles.admin.description": "可管理成员和设置",
   "settings.members.roles.member.label": "成员",
-  "settings.members.roles.member.description": "可创建并处理决策单",
+  "settings.members.roles.member.description": "可创建并处理任务",
   "settings.repositories.title": "代码仓库",
-  "settings.repositories.description": "与此业务空间关联的 GitHub 代码仓库。专家 Agent 会使用这些仓库来克隆代码并开展工作。",
+  "settings.repositories.description": "与此业务空间关联的 GitHub 代码仓库。数字员工会使用这些仓库来克隆代码并开展工作。",
   "settings.repositories.fields.urlPlaceholder": "https://github.com/org/repo",
   "settings.repositories.fields.descriptionPlaceholder": "描述（例如：Go 后端 + Next.js 前端）",
   "settings.repositories.actions.addRepository": "添加代码仓库",

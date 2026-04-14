@@ -65,7 +65,7 @@ export function SkillsTab({
         <div>
           <h3 className="text-sm font-semibold">技能包</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            这里显示已经绑定到这个专家的技能包。你也可以在技能包页面统一维护。
+            这里显示已经绑定到这个数字员工的技能包。你也可以在技能包页面统一维护。
           </p>
         </div>
         <Button
@@ -84,7 +84,7 @@ export function SkillsTab({
           <FileText className="h-8 w-8 text-muted-foreground/40" />
           <p className="mt-3 text-sm text-muted-foreground">还没有绑定技能包</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            可以把工作区里的技能包绑定到这个专家。
+            可以把工作区里的技能包绑定到这个数字员工。
           </p>
           {availableSkills.length > 0 && (
             <Button
@@ -137,7 +137,7 @@ export function SkillsTab({
             <DialogHeader>
               <DialogTitle className="text-sm">添加技能包</DialogTitle>
               <DialogDescription className="text-xs">
-                选择一个要绑定到这个专家的技能包。
+                选择一个要绑定到这个数字员工的技能包。
               </DialogDescription>
             </DialogHeader>
             <div className="max-h-64 overflow-y-auto space-y-1">

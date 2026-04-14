@@ -108,9 +108,12 @@ export function AssigneePicker({
             <span className="truncate">{triggerLabel}</span>
           </>
         ) : (
-          <span className="text-muted-foreground">
-            {isZh ? "未分配" : "Unassigned"}
-          </span>
+          <>
+            <UserMinus className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span className="text-muted-foreground">
+              {isZh ? "未分配" : "Unassigned"}
+            </span>
+          </>
         )
       }
     >
@@ -152,7 +155,7 @@ export function AssigneePicker({
 
       {/* Agents */}
       {filteredAgents.length > 0 && (
-        <PickerSection label={isZh ? "Agent" : "Agents"}>
+        <PickerSection label={isZh ? "数字员工" : "Agents"}>
           {filteredAgents.map((a) => {
             const allowed = canAssignAgent(a, user?.id, memberRole);
             return (

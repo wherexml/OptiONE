@@ -58,13 +58,9 @@ function formatRiskLevel(value: string): string {
   return riskLevelLabelMap[value] ?? formatDecisionValue(value);
 }
 
-function getAlertSource(item: InboxItem, decision: DecisionCase | undefined, getActorName: (type: string, id: string) => string) {
+function getAlertSource(item: InboxItem, getActorName: (type: string, id: string) => string) {
   if (item.actor_type && item.actor_id) {
     return getActorName(item.actor_type, item.actor_id);
-  }
-
-  if (decision?.domain) {
-    return formatDecisionValue(decision.domain);
   }
 
   return "系统";
@@ -77,7 +73,8 @@ interface InboxAlertsSectionProps {
   isLoading: boolean;
   onFiltersChange: (filters: AlertFilters) => void;
   onSelectItem: (item: InboxItem) => void;
-  onCreateDecision: () => void;
+  onOpenDecision: (item: InboxItem) => void;
+  onConvertAlert: (item: InboxItem) => void;
 }
 
 export function InboxAlertsSection({
@@ -87,7 +84,8 @@ export function InboxAlertsSection({
   isLoading,
   onFiltersChange,
   onSelectItem,
-  onCreateDecision,
+  onOpenDecision,
+  onConvertAlert,
 }: InboxAlertsSectionProps) {
   const { getActorName } = useActorName();
   const decisionByIssueId = useMemo(() => getDecisionByIssueId(decisions), [decisions]);
@@ -106,31 +104,10 @@ export function InboxAlertsSection({
         <div>
           <h2 className="text-sm font-semibold">异常告警</h2>
           <p className="text-xs text-muted-foreground">
-            聚焦需要尽快处理的风险信号，并支持一键生成 {t("issue")}。
+            聚焦需要尽快处理的风险信号，并支持一键生成或打开{t("decision")}单。
           </p>
         </div>
         <div className="flex gap-2">
-          <Select
-            value={filters.domain}
-            onValueChange={(domain) =>
-              onFiltersChange({ ...filters, domain: domain ?? "all" })
-            }
-          >
-            <SelectTrigger size="sm" className="w-[132px]">
-              <SelectValue placeholder="业务域" />
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem value="all">全部业务域</SelectItem>
-              {filterOptions.domains
-                .filter((domain): domain is string => Boolean(domain))
-                .map((domain) => (
-                <SelectItem key={domain} value={domain}>
-                  {formatDecisionValue(domain)}
-                </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-
           <Select
             value={filters.riskLevel}
             onValueChange={(riskLevel) =>
@@ -182,7 +159,12 @@ export function InboxAlertsSection({
           {alertItems.map((item) => {
             const decision = item.issue_id ? decisionByIssueId.get(item.issue_id) : undefined;
             const preview = item.body?.trim() || typeLabels[item.type];
-            const source = getAlertSource(item, decision, getActorName);
+            const source = getAlertSource(item, getActorName);
+            const actionLabel = decision
+              ? `打开${t("decision")}单`
+              : item.issue_id
+                ? `生成${t("decision")}单`
+                : "查看详情";
 
             return (
               <Card key={item.id} size="sm" className="overflow-visible">
@@ -219,9 +201,6 @@ export function InboxAlertsSection({
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                         <span>{timeAgo(item.created_at)}</span>
                         <span>来源：{source}</span>
-                        {decision?.domain && (
-                          <span>业务域：{formatDecisionValue(decision.domain)}</span>
-                        )}
                       </div>
                     </button>
 
@@ -229,11 +208,21 @@ export function InboxAlertsSection({
                       size="sm"
                       onClick={(event) => {
                         event.stopPropagation();
-                        onCreateDecision();
+                        if (decision) {
+                          onOpenDecision(item);
+                          return;
+                        }
+
+                        if (item.issue_id) {
+                          onConvertAlert(item);
+                          return;
+                        }
+
+                        onSelectItem(item);
                       }}
                       className="shrink-0"
                     >
-                      生成{t("issue")}
+                      {actionLabel}
                     </Button>
                   </div>
                 </CardContent>

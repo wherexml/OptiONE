@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
+import { issueKeys } from "../issues/queries";
 import { inboxKeys } from "./queries";
 import { useWorkspaceId } from "../hooks";
 import type { InboxItem } from "../types";
@@ -108,6 +109,25 @@ export function useArchiveCompletedInbox() {
     mutationFn: () => api.archiveCompletedInbox(),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: inboxKeys.list(wsId) });
+    },
+  });
+}
+
+export function useConvertAlertToDecision() {
+  const qc = useQueryClient();
+  const wsId = useWorkspaceId();
+
+  return useMutation({
+    mutationFn: (alertId: string) => api.convertAlertToDecision(alertId),
+    onSuccess: (decision) => {
+      qc.invalidateQueries({ queryKey: issueKeys.detail(wsId, decision.id) });
+      qc.invalidateQueries({ queryKey: ["decisions", decision.id, "detail"] });
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: inboxKeys.list(wsId) });
+      qc.invalidateQueries({ queryKey: issueKeys.list(wsId) });
+      qc.invalidateQueries({ queryKey: issueKeys.myAll(wsId) });
+      qc.invalidateQueries({ queryKey: ["decisions"] });
     },
   });
 }

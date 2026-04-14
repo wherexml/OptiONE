@@ -36,6 +36,7 @@ import {
 } from "@multica/ui/components/ui/dialog";
 import { useNavigation } from "../navigation";
 import { useSearchStore } from "./search-store";
+import { getProjectIconValue } from "../projects/components/project-icon";
 
 function HighlightText({ text, query }: { text: string; query: string }) {
   const parts = useMemo(() => {
@@ -115,7 +116,7 @@ export function SearchCommand() {
         href: "/issues",
         label: t("issuesCenter", locale),
         icon: ListTodo,
-        keywords: isZh ? ["决策单", "任务", "问题"] : ["issues", "tasks", "bugs"],
+        keywords: isZh ? ["所有任务", "任务", "问题"] : ["issues", "tasks", "bugs"],
       },
       {
         href: "/projects",
@@ -127,7 +128,7 @@ export function SearchCommand() {
         href: "/agents",
         label: t("agent", locale),
         icon: Bot,
-        keywords: isZh ? ["专家", "智能体", "Agent"] : ["agents", "bots", "ai"],
+        keywords: isZh ? ["数字员工", "专家", "智能体", "Agent"] : ["agents", "bots", "ai"],
       },
       {
         href: "/runtimes",
@@ -287,7 +288,7 @@ export function SearchCommand() {
           <DialogHeader className="sr-only">
           <DialogTitle>{isZh ? "搜索" : "Search"}</DialogTitle>
           <DialogDescription>
-            {isZh ? "搜索页面、决策单和项目" : "Search pages, issues, and projects"}
+            {isZh ? "搜索页面、任务和项目" : "Search pages, issues, and projects"}
           </DialogDescription>
         </DialogHeader>
         <CommandPrimitive
@@ -358,7 +359,7 @@ export function SearchCommand() {
                   >
                     <div className="flex items-center gap-2.5">
                       <span className="size-4 shrink-0 text-center text-sm leading-4">
-                        {project.icon || <FolderKanban className="size-4 text-muted-foreground" />}
+                        {getProjectIconValue(project.icon)}
                       </span>
                       <span className="truncate">
                         <HighlightText text={project.title} query={query} />
@@ -387,7 +388,7 @@ export function SearchCommand() {
 
             {!isLoading && results.issues.length > 0 && (
               <CommandPrimitive.Group
-                heading={isZh ? "决策单" : "Issues"}
+                heading={isZh ? "任务" : "Issues"}
                 className="p-2 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
               >
                 {results.issues.map((issue) => (
@@ -465,7 +466,7 @@ export function SearchCommand() {
             {!isLoading && !query.trim() && recentIssues.length === 0 && (
               <div className="flex flex-col items-center gap-2 py-10 text-sm text-muted-foreground">
                 <span>
-                  {isZh ? "输入关键词搜索决策单和项目..." : "Type to search issues and projects..."}
+                  {isZh ? "输入关键词搜索任务和项目..." : "Type to search issues and projects..."}
                 </span>
                 <span className="text-xs">
                   {isZh ? "按 " : "Press "}

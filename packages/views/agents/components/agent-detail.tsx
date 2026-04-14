@@ -11,6 +11,7 @@ import {
   AlertCircle,
   MoreHorizontal,
   Settings,
+  Clock,
 } from "lucide-react";
 import type { Agent, RuntimeDevice } from "@multica/core/types";
 import {
@@ -28,11 +29,12 @@ import {
   DropdownMenuItem,
 } from "@multica/ui/components/ui/dropdown-menu";
 import { Button } from "@multica/ui/components/ui/button";
-import { ActorAvatar } from "../../common/actor-avatar";
 import { statusConfig } from "../config";
-import { getAgentDomainMeta, getAgentStatusLabel } from "./agent-list-item";
+import { AgentAvatar } from "../../common/agent-avatar";
+import { getAgentDomainMeta, getAgentStatusLabel } from "./agent-meta";
 import { InstructionsTab } from "./tabs/instructions-tab";
 import { SkillsTab } from "./tabs/skills-tab";
+import { TriggersTab } from "./tabs/triggers-tab";
 import { TasksTab } from "./tabs/tasks-tab";
 import { SettingsTab } from "./tabs/settings-tab";
 
@@ -40,13 +42,14 @@ function getRuntimeDevice(agent: Agent, runtimes: RuntimeDevice[]): RuntimeDevic
   return runtimes.find((runtime) => runtime.id === agent.runtime_id);
 }
 
-type DetailTab = "instructions" | "skills" | "tasks" | "settings";
+type DetailTab = "instructions" | "skills" | "triggers" | "tasks" | "settings";
 
 const capabilityLabels = ["数据分析", "仿真建模", "方案推荐", "执行操作", "风险评估"] as const;
 
 const detailTabs: { id: DetailTab; label: string; icon: typeof FileText }[] = [
   { id: "instructions", label: "说明", icon: FileText },
   { id: "skills", label: "技能", icon: BookOpenText },
+  { id: "triggers", label: "触发器", icon: Clock },
   { id: "tasks", label: "任务", icon: ListTodo },
   { id: "settings", label: "设置", icon: Settings },
 ];
@@ -78,7 +81,7 @@ export function AgentDetail({
       {isArchived && (
         <div className="flex items-center gap-2 bg-muted/50 px-4 py-2 text-xs text-muted-foreground border-b">
           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-          <span className="flex-1">该专家已归档，不能再被指派或提及。</span>
+          <span className="flex-1">该数字员工已归档，不能再被指派或提及。</span>
           <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => onRestore(agent.id)}>
             恢复
           </Button>
@@ -87,7 +90,7 @@ export function AgentDetail({
 
       {/* Header */}
       <div className="flex h-12 shrink-0 items-center gap-3 border-b px-4">
-        <ActorAvatar actorType="agent" actorId={agent.id} size={28} className={`rounded-md ${isArchived ? "opacity-50" : ""}`} />
+        <AgentAvatar agent={agent} size={28} className="rounded-md" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h2 className={`text-sm font-semibold truncate ${isArchived ? "text-muted-foreground" : ""}`}>{agent.name}</h2>
@@ -126,7 +129,7 @@ export function AgentDetail({
                 onClick={() => setConfirmArchive(true)}
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                归档专家
+                归档数字员工
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -138,7 +141,7 @@ export function AgentDetail({
           <div>
             <h3 className="text-sm font-semibold">职责说明</h3>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              {agent.description?.trim() || "这个专家还没有补充职责说明。"}
+              {agent.description?.trim() || "这个数字员工还没有补充职责说明。"}
             </p>
           </div>
           <div>
@@ -162,9 +165,6 @@ export function AgentDetail({
         <div className="flex items-center justify-between gap-3">
           <div className="pt-4">
             <h3 className="text-sm font-semibold">能力矩阵</h3>
-            <p className="mt-1 text-xs text-muted-foreground">
-              当前领域：{domainMeta.label}
-            </p>
           </div>
         </div>
         <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -217,6 +217,9 @@ export function AgentDetail({
         {activeTab === "skills" && (
           <SkillsTab agent={agent} />
         )}
+        {activeTab === "triggers" && (
+          <TriggersTab agent={agent} />
+        )}
         {activeTab === "tasks" && <TasksTab agent={agent} />}
         {activeTab === "settings" && (
           <SettingsTab
@@ -236,7 +239,7 @@ export function AgentDetail({
                 <AlertCircle className="h-5 w-5 text-destructive" />
               </div>
               <DialogHeader className="flex-1 gap-1">
-                <DialogTitle className="text-sm font-semibold">归档这个专家？</DialogTitle>
+                <DialogTitle className="text-sm font-semibold">归档这个数字员工？</DialogTitle>
                 <DialogDescription className="text-xs">
                   &quot;{agent.name}&quot; 会被归档。之后不能再被指派或提及，但历史记录会保留，后续也可以恢复。
                 </DialogDescription>

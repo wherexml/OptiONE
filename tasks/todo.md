@@ -1,3 +1,36 @@
+# FE-P1-032 登录注册页中文化与 OptiOne 品牌统一
+
+- [x] Inspect the localized auth copy requirements and current login/register coverage
+- [x] Add failing auth page tests for the new Chinese copy and OptiOne branding
+- [x] Update the login and register pages to use the approved Chinese text
+- [x] Verify the targeted auth tests and browser-visible login/register pages, then record review notes
+
+## Review
+
+- Replaced the login page header with `OptiONE Platform` and converted the login card copy, labels, placeholders, validation messages, and footer link text to Chinese.
+- Converted the register page to Chinese, removed the visible `Multica` wording in favor of `OptiOne`, and localized the name/email/password/confirm-password flow plus the footer link text.
+- Added a shared auth error localizer so common password-auth API errors no longer surface in English on these two pages.
+- Wired the register footer submit button back to the form so the localized register CTA still submits correctly after the copy update.
+- Verified with `pnpm --filter @multica/web exec vitest run app/(auth)/login/page.test.tsx app/(auth)/register/page.test.tsx`, `pnpm --filter @multica/web typecheck`, and live browser checks on `http://localhost:22202/login` and `http://localhost:22202/register`.
+
+# FE-P1-031 任务术语统一与页面易懂化修复
+
+- [x] Remove the non-functional Skills recommendation template block from the settings panel
+- [x] Rename the control-tower agent label and related helper copy to the approved exception-handling wording
+- [x] Fix legacy project icon token rendering so old token values no longer appear as overlapping text
+- [x] Rename “我的 Agent” and clarify it as the user-owned digital-employee scope
+- [x] Replace all user-facing “决策单” labels with “任务”, including “决策单中心” to “所有任务”
+- [x] Localize the issue-center scope tabs from All / Members / Agents to 全部 / 成员 / 数字员工
+- [x] Verify the affected tests, type checks, and browser-visible flows, then record review notes
+
+## Review
+
+- Removed the non-clickable Skills recommendation template block so the settings panel no longer shows a fake action area.
+- Unified the visible issue terminology to `任务`, renamed `决策单中心` to `所有任务`, and localized the issue-center scope tabs plus My Issues agent scope to clearer Chinese wording.
+- Renamed the alert-focused agent presentation from `控制塔` to `异常处理`, added a migration to fix the legacy demo agent record in the database, and confirmed the agents page now shows `异常处理Agent` without leftover `控制塔 Agent` or `决策单`.
+- Added a project icon normalizer so legacy token values like `package` render as real icons instead of overlapping raw text in project lists and search.
+- Verified with `pnpm --filter @multica/core exec vitest run ./platform/lexicon.test.ts`, `pnpm --filter @multica/views exec vitest run ./issues/components/issues-page.test.tsx ./agents/components/agent-list-item.test.ts ./layout/app-sidebar.test.tsx ./projects/components/project-icon.test.ts ./search/search-command.test.tsx`, `pnpm --filter @multica/views typecheck`, `docker compose --profile migrate run --rm --build migrate`, and browser checks on `/issues`, `/my-issues`, `/skills`, `/agents`, and `/projects`.
+
 # FE-P1-030 我的待办双栏详情与中文化修复
 
 - [x] Locate the My Issues routing flow, locale wiring, and issue detail back-navigation touchpoints

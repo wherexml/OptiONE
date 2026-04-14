@@ -4,6 +4,7 @@ import { Check, FolderKanban, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { projectListOptions } from "@multica/core/projects/queries";
 import { useWorkspaceId } from "@multica/core/hooks";
+import { getClientLocale } from "@multica/core/platform";
 import type { UpdateIssueRequest } from "@multica/core/types";
 import {
   DropdownMenu,
@@ -12,6 +13,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@multica/ui/components/ui/dropdown-menu";
+import { getProjectIconValue } from "./project-icon";
 
 export function ProjectPicker({
   projectId,
@@ -24,6 +26,8 @@ export function ProjectPicker({
   triggerRender?: React.ReactElement;
   align?: "start" | "center" | "end";
 }) {
+  const locale = getClientLocale();
+  const isZh = locale === "zh-CN";
   const wsId = useWorkspaceId();
   const { data: projects = [] } = useQuery(projectListOptions(wsId));
   const current = projects.find((p) => p.id === projectId);
@@ -35,12 +39,12 @@ export function ProjectPicker({
         render={triggerRender}
       >
         <FolderKanban className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-        <span className="truncate">{current ? current.title : "No project"}</span>
+        <span className="truncate">{current ? current.title : (isZh ? "选择项目" : "No project")}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="w-52">
         {projects.map((p) => (
           <DropdownMenuItem key={p.id} onClick={() => onUpdate({ project_id: p.id })}>
-            <span className="mr-1">{p.icon || "📁"}</span>
+            <span className="mr-1">{getProjectIconValue(p.icon)}</span>
             <span className="truncate">{p.title}</span>
             {p.id === projectId && <Check className="ml-auto h-3.5 w-3.5 shrink-0" />}
           </DropdownMenuItem>
@@ -49,11 +53,11 @@ export function ProjectPicker({
         {projectId && (
           <DropdownMenuItem onClick={() => onUpdate({ project_id: null })}>
             <X className="h-3.5 w-3.5 text-muted-foreground" />
-            Remove from project
+            {isZh ? "移出项目" : "Remove from project"}
           </DropdownMenuItem>
         )}
         {projects.length === 0 && (
-          <div className="px-2 py-1.5 text-xs text-muted-foreground">No projects yet</div>
+          <div className="px-2 py-1.5 text-xs text-muted-foreground">{isZh ? "暂无项目" : "No projects yet"}</div>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

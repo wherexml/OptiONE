@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Bot, ChevronRight, ChevronDown, Loader2, ArrowDown, Brain, AlertCircle, Clock, CheckCircle2, XCircle, Square, Maximize2 } from "lucide-react";
 import { api } from "@multica/core/api";
+import { getClientLocale } from "@multica/core/platform";
 import { useWSEvent } from "@multica/core/realtime";
 import type { TaskMessagePayload, TaskCompletedPayload, TaskFailedPayload, TaskCancelledPayload } from "@multica/core/types/events";
 import type { AgentTask } from "@multica/core/types/agent";
@@ -26,22 +27,42 @@ interface TimelineItem {
   output?: string;
 }
 
-function formatElapsed(startedAt: string): string {
+function formatElapsed(startedAt: string, locale: string): string {
   const elapsed = Date.now() - new Date(startedAt).getTime();
   const seconds = Math.floor(elapsed / 1000);
-  if (seconds < 60) return `${seconds}s`;
+  const isZh = locale === "zh-CN";
+  if (seconds < 60) return isZh ? `${seconds}秒` : `${seconds}s`;
   const minutes = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  return `${minutes}m ${secs}s`;
+  return isZh ? `${minutes}分 ${secs}秒` : `${minutes}m ${secs}s`;
 }
 
-function formatDuration(start: string, end: string): string {
+function formatDuration(start: string, end: string, locale: string): string {
   const ms = new Date(end).getTime() - new Date(start).getTime();
   const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
+  const isZh = locale === "zh-CN";
+  if (seconds < 60) return isZh ? `${seconds}秒` : `${seconds}s`;
   const minutes = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  return `${minutes}m ${secs}s`;
+  return isZh ? `${minutes}分 ${secs}秒` : `${minutes}m ${secs}s`;
+}
+
+function getTaskStatusLabel(status: AgentTask["status"], locale: string): string {
+  if (locale !== "zh-CN") return status;
+  switch (status) {
+    case "completed":
+      return "已完成";
+    case "failed":
+      return "失败";
+    case "cancelled":
+      return "已取消";
+    case "running":
+      return "运行中";
+    case "queued":
+      return "排队中";
+    default:
+      return status;
+  }
 }
 
 function shortenPath(p: string): string {
@@ -111,6 +132,8 @@ interface AgentLiveCardProps {
 
 export function AgentLiveCard({ issueId }: AgentLiveCardProps) {
   const { getActorName } = useActorName();
+  const locale = getClientLocale();
+  const isZh = locale === "zh-CN";
   const [taskStates, setTaskStates] = useState<Map<string, TaskState>>(new Map());
   const seenSeqs = useRef(new Set<string>());
 
@@ -237,7 +260,7 @@ export function AgentLiveCard({ issueId }: AgentLiveCardProps) {
           task={firstEntry.task}
           items={firstEntry.items}
           issueId={issueId}
-          agentName={firstEntry.task.agent_id ? getActorName("agent", firstEntry.task.agent_id) : "Agent"}
+          agentName={firstEntry.task.agent_id ? getActorName("agent", firstEntry.task.agent_id) : (isZh ? "数字员工" : "Agent")}
         />
       </div>
       {/* Additional agents — scroll with the page */}
@@ -249,7 +272,7 @@ export function AgentLiveCard({ issueId }: AgentLiveCardProps) {
               task={task}
               items={items}
               issueId={issueId}
-              agentName={task.agent_id ? getActorName("agent", task.agent_id) : "Agent"}
+              agentName={task.agent_id ? getActorName("agent", task.agent_id) : (isZh ? "数字员工" : "Agent")}
             />
           ))}
         </div>
@@ -268,6 +291,8 @@ interface SingleAgentLiveCardProps {
 }
 
 function SingleAgentLiveCard({ task, items, issueId, agentName }: SingleAgentLiveCardProps) {
+  const locale = getClientLocale();
+  const isZh = locale === "zh-CN";
   const [elapsed, setElapsed] = useState("");
   const [open, setOpen] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -279,10 +304,10 @@ function SingleAgentLiveCard({ task, items, issueId, agentName }: SingleAgentLiv
   useEffect(() => {
     if (!task.started_at && !task.dispatched_at) return;
     const startRef = task.started_at ?? task.dispatched_at!;
-    setElapsed(formatElapsed(startRef));
-    const interval = setInterval(() => setElapsed(formatElapsed(startRef)), 1000);
+    setElapsed(formatElapsed(startRef, locale));
+    const interval = setInterval(() => setElapsed(formatElapsed(startRef, locale)), 1000);
     return () => clearInterval(interval);
-  }, [task.started_at, task.dispatched_at]);
+  }, [locale, task.started_at, task.dispatched_at]);
 
   // Auto-scroll timeline to bottom
   useEffect(() => {
@@ -307,10 +332,10 @@ function SingleAgentLiveCard({ task, items, issueId, agentName }: SingleAgentLiv
     try {
       await api.cancelTask(issueId, task.id);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to cancel task");
+      toast.error(e instanceof Error ? e.message : (isZh ? "停止任务失败" : "Failed to cancel task"));
       setCancelling(false);
     }
-  }, [task.id, issueId, cancelling]);
+  }, [task.id, issueId, cancelling, isZh]);
 
   const toolCount = items.filter((i) => i.type === "tool_use").length;
 
@@ -339,17 +364,17 @@ function SingleAgentLiveCard({ task, items, issueId, agentName }: SingleAgentLiv
         )}
         <div className="flex items-center gap-1.5 text-xs min-w-0">
           <Loader2 className="h-3 w-3 animate-spin text-info shrink-0" />
-          <span className="font-medium text-foreground truncate">{agentName} is working</span>
+          <span className="font-medium text-foreground truncate">{isZh ? `${agentName} 正在处理` : `${agentName} is working`}</span>
           <span className="text-muted-foreground tabular-nums shrink-0">{elapsed}</span>
           {toolCount > 0 && (
-            <span className="text-muted-foreground shrink-0">{toolCount} tools</span>
+            <span className="text-muted-foreground shrink-0">{isZh ? `${toolCount} 个工具` : `${toolCount} tools`}</span>
           )}
         </div>
         <div className="ml-auto flex items-center gap-1 shrink-0">
           <button
             onClick={(e) => { e.stopPropagation(); setTranscriptOpen(true); }}
             className="flex items-center justify-center rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-            title="Expand transcript"
+            title={isZh ? "展开完整记录" : "Expand transcript"}
           >
             <Maximize2 className="h-3 w-3" />
           </button>
@@ -357,10 +382,10 @@ function SingleAgentLiveCard({ task, items, issueId, agentName }: SingleAgentLiv
             onClick={(e) => { e.stopPropagation(); handleCancel(); }}
             disabled={cancelling}
             className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-            title="Stop agent"
+            title={isZh ? "停止数字员工" : "Stop agent"}
           >
             {cancelling ? <Loader2 className="h-3 w-3 animate-spin" /> : <Square className="h-3 w-3" />}
-            <span>Stop</span>
+            <span>{isZh ? "停止" : "Stop"}</span>
           </button>
           <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
         </div>
@@ -396,14 +421,16 @@ function SingleAgentLiveCard({ task, items, issueId, agentName }: SingleAgentLiv
                   className="sticky bottom-0 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-background border px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground shadow-sm"
                 >
                   <ArrowDown className="h-3 w-3" />
-                  Latest
+                  {isZh ? "最新内容" : "Latest"}
                 </button>
               )}
             </div>
           ) : (
             <div className="border-t border-info/10 px-3 py-3">
               <p className="text-xs text-muted-foreground">
-                Live log is not available for this agent provider. Results will appear when the task completes.
+                {isZh
+                  ? "当前数字员工暂不支持实时日志，任务完成后会显示结果。"
+                  : "Live log is not available for this agent provider. Results will appear when the task completes."}
               </p>
             </div>
           )}
@@ -430,6 +457,8 @@ interface TaskRunHistoryProps {
 }
 
 export function TaskRunHistory({ issueId }: TaskRunHistoryProps) {
+  const locale = getClientLocale();
+  const isZh = locale === "zh-CN";
   const [tasks, setTasks] = useState<AgentTask[]>([]);
   const [open, setOpen] = useState(false);
 
@@ -474,7 +503,7 @@ export function TaskRunHistory({ issueId }: TaskRunHistoryProps) {
       <CollapsibleTrigger className="flex w-full items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1">
         <ChevronRight className={cn("h-3 w-3 transition-transform", open && "rotate-90")} />
         <Clock className="h-3 w-3" />
-        <span>Execution history ({completedTasks.length})</span>
+        <span>{isZh ? `执行记录（${completedTasks.length}）` : `Execution history (${completedTasks.length})`}</span>
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="mt-1 space-y-2">
@@ -489,6 +518,8 @@ export function TaskRunHistory({ issueId }: TaskRunHistoryProps) {
 
 function TaskRunEntry({ task }: { task: AgentTask }) {
   const { getActorName } = useActorName();
+  const locale = getClientLocale();
+  const isZh = locale === "zh-CN";
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<TimelineItem[] | null>(null);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
@@ -508,7 +539,7 @@ function TaskRunEntry({ task }: { task: AgentTask }) {
   }, [open, loadMessages]);
 
   const duration = task.started_at && task.completed_at
-    ? formatDuration(task.started_at, task.completed_at)
+    ? formatDuration(task.started_at, task.completed_at, locale)
     : null;
 
   return (
@@ -521,11 +552,16 @@ function TaskRunEntry({ task }: { task: AgentTask }) {
           <XCircle className="h-3.5 w-3.5 shrink-0 text-destructive" />
         )}
         <span className="text-muted-foreground">
-          {new Date(task.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+          {new Date(task.created_at).toLocaleString(
+            locale,
+            isZh
+              ? { year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }
+              : { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" },
+          )}
         </span>
         {duration && <span className="text-muted-foreground">{duration}</span>}
-        <span className={cn("ml-auto capitalize", task.status === "completed" ? "text-success" : "text-destructive")}>
-          {task.status}
+        <span className={cn("ml-auto", task.status === "completed" ? "text-success" : "text-destructive")}>
+          {getTaskStatusLabel(task.status, locale)}
         </span>
         <span
           role="button"
@@ -550,7 +586,7 @@ function TaskRunEntry({ task }: { task: AgentTask }) {
             }
           }}
           className="flex items-center justify-center rounded p-0.5 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors cursor-pointer"
-          title="Expand transcript"
+          title={isZh ? "展开完整记录" : "Expand transcript"}
         >
           <Maximize2 className="h-3 w-3" />
         </span>
@@ -560,10 +596,10 @@ function TaskRunEntry({ task }: { task: AgentTask }) {
           {items === null ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
               <Loader2 className="h-3 w-3 animate-spin" />
-              Loading...
+              {isZh ? "加载中..." : "Loading..."}
             </div>
           ) : items.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-2">No execution data recorded.</p>
+            <p className="text-xs text-muted-foreground py-2">{isZh ? "暂无执行记录。" : "No execution data recorded."}</p>
           ) : (
             items.map((item, idx) => (
               <TimelineRow key={`${item.seq}-${idx}`} item={item} />
@@ -579,7 +615,7 @@ function TaskRunEntry({ task }: { task: AgentTask }) {
           onOpenChange={setTranscriptOpen}
           task={task}
           items={items}
-          agentName={task.agent_id ? getActorName("agent", task.agent_id) : "Agent"}
+          agentName={task.agent_id ? getActorName("agent", task.agent_id) : (isZh ? "数字员工" : "Agent")}
         />
       )}
     </Collapsible>

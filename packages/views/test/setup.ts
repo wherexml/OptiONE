@@ -14,3 +14,8 @@ if (typeof globalThis.ResizeObserver === "undefined") {
 if (typeof document.elementFromPoint !== "function") {
   document.elementFromPoint = () => null;
 }
+
+// jsdom doesn't implement scrollIntoView; chat views call it after rendering.
+if (typeof Element !== "undefined" && typeof Element.prototype.scrollIntoView !== "function") {
+  Element.prototype.scrollIntoView = () => {};
+}

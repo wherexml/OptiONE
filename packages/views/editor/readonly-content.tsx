@@ -16,6 +16,7 @@
  * - Rendering mentions with the same IssueMentionCard component and .mention class
  */
 
+import * as React from "react";
 import { useMemo, useState } from "react";
 import ReactMarkdown, {
   defaultUrlTransform,
@@ -29,6 +30,7 @@ import { createLowlight, common } from "lowlight";
 import { toHtml } from "hast-util-to-html";
 import { Maximize2, Download, Link as LinkIcon, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { getClientLocale } from "@multica/core/platform";
 import { cn } from "@multica/ui/lib/utils";
 import { useNavigation } from "../navigation";
 import { IssueMentionCard } from "../issues/components/issue-mention-card";
@@ -81,6 +83,18 @@ function urlTransform(url: string): string {
   return defaultUrlTransform(url);
 }
 
+function flattenText(children: React.ReactNode): string | undefined {
+  const text = React.Children.toArray(children)
+    .map((child) => (typeof child === "string" ? child : ""))
+    .join("");
+  return text || undefined;
+}
+
+function localizeMentionLabel(label: string | undefined, locale: string): string | undefined {
+  if (!label || locale !== "zh-CN") return label;
+  return label.replace(/\s*Agent$/, " 数字员工");
+}
+
 // ---------------------------------------------------------------------------
 // Custom react-markdown components
 // ---------------------------------------------------------------------------
@@ -106,114 +120,110 @@ function IssueMentionLink({ issueId, label }: { issueId: string; label?: string 
   );
 }
 
-const components: Partial<Components> = {
-  // Links — route mention:// to mention components, others open in new tab
-  a: ({ href, children }) => {
-    if (href?.startsWith("mention://")) {
-      const match = href.match(
-        /^mention:\/\/(member|agent|issue|all)\/(.+)$/,
-      );
-      if (match?.[1] === "issue" && match[2]) {
-        const label =
-          typeof children === "string"
-            ? children
-            : Array.isArray(children)
-              ? children.join("")
-              : undefined;
-        return <IssueMentionLink issueId={match[2]} label={label} />;
+function createComponents(locale: string): Partial<Components> {
+  return {
+    // Links — route mention:// to mention components, others open in new tab
+    a: ({ href, children }) => {
+      if (href?.startsWith("mention://")) {
+        const match = href.match(
+          /^mention:\/\/(member|agent|issue|all)\/(.+)$/,
+        );
+        const label = localizeMentionLabel(flattenText(children), locale);
+        if (match?.[1] === "issue" && match[2]) {
+          return <IssueMentionLink issueId={match[2]} label={label} />;
+        }
+        return <span className="mention">{label ?? children}</span>;
       }
-      // Member / agent / all mentions
-      return <span className="mention">{children}</span>;
-    }
 
-    // Regular links — open in new tab
-    return (
-      <a
-        href={href}
-        onClick={(e) => {
-          e.preventDefault();
-          if (href) window.open(href, "_blank", "noopener,noreferrer");
-        }}
-      >
-        {children}
-      </a>
-    );
-  },
-
-  // Images — centered with toolbar + lightbox (matches Tiptap ImageView NodeView)
-  img: function ReadonlyImage({ src, alt }) {
-    const [lightbox, setLightbox] = useState(false);
-    const imgSrc = typeof src === "string" ? src : "";
-    const imgAlt = alt ?? "";
-
-    const handleView = () => setLightbox(true);
-    const handleDownload = () => {
-      window.open(imgSrc, "_blank", "noopener,noreferrer");
-    };
-    const handleCopyLink = async () => {
-      try {
-        await navigator.clipboard.writeText(imgSrc);
-        toast.success("Link copied");
-      } catch {
-        toast.error("Failed to copy link");
-      }
-    };
-
-    return (
-      <span className="image-node">
-        <span className="image-figure" onClick={handleView}>
-          <img src={imgSrc} alt={imgAlt} className="image-content" draggable={false} />
-          <span
-            className="image-toolbar"
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button type="button" onClick={handleView} title="View image">
-              <Maximize2 className="size-3.5" />
-            </button>
-            <button type="button" onClick={handleDownload} title="Download">
-              <Download className="size-3.5" />
-            </button>
-            <button type="button" onClick={handleCopyLink} title="Copy link">
-              <LinkIcon className="size-3.5" />
-            </button>
-          </span>
-        </span>
-        {lightbox && (
-          <ImageLightbox src={imgSrc} alt={imgAlt} onClose={() => setLightbox(false)} />
-        )}
-      </span>
-    );
-  },
-
-  // FileCard — intercept <div data-type="fileCard"> from preprocessMarkdown
-  div: ({ node, children, ...props }) => {
-    const dataType = node?.properties?.dataType as string | undefined;
-    if (dataType === "fileCard") {
-      const rawHref = (node?.properties?.dataHref as string) || "";
-      // Only allow http(s) URLs to prevent javascript: and other dangerous schemes.
-      const href = /^https?:\/\//i.test(rawHref) ? rawHref : "";
-      const filename = (node?.properties?.dataFilename as string) || "";
+      // Regular links — open in new tab
       return (
-        <div className="my-1 flex items-center gap-2 rounded-md border border-border bg-muted/50 px-2.5 py-1 transition-colors hover:bg-muted">
-          <FileText className="size-4 shrink-0 text-muted-foreground" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm">{filename}</p>
-          </div>
-          {href && (
-            <button
-              type="button"
-              className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-              onClick={() => window.open(href, "_blank", "noopener,noreferrer")}
-            >
-              <Download className="size-3.5" />
-            </button>
-          )}
-        </div>
+        <a
+          href={href}
+          onClick={(e) => {
+            e.preventDefault();
+            if (href) window.open(href, "_blank", "noopener,noreferrer");
+          }}
+        >
+          {children}
+        </a>
       );
-    }
-    return <div {...props}>{children}</div>;
-  },
+    },
+
+    // Images — centered with toolbar + lightbox (matches Tiptap ImageView NodeView)
+    img: function ReadonlyImage({ src, alt }) {
+      const [lightbox, setLightbox] = useState(false);
+      const imgSrc = typeof src === "string" ? src : "";
+      const imgAlt = alt ?? "";
+
+      const handleView = () => setLightbox(true);
+      const handleDownload = () => {
+        window.open(imgSrc, "_blank", "noopener,noreferrer");
+      };
+      const handleCopyLink = async () => {
+        try {
+          await navigator.clipboard.writeText(imgSrc);
+          toast.success(locale === "zh-CN" ? "链接已复制" : "Link copied");
+        } catch {
+          toast.error(locale === "zh-CN" ? "复制链接失败" : "Failed to copy link");
+        }
+      };
+
+      return (
+        <span className="image-node">
+          <span className="image-figure" onClick={handleView}>
+            <img src={imgSrc} alt={imgAlt} className="image-content" draggable={false} />
+            <span
+              className="image-toolbar"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button type="button" onClick={handleView} title={locale === "zh-CN" ? "查看图片" : "View image"}>
+                <Maximize2 className="size-3.5" />
+              </button>
+              <button type="button" onClick={handleDownload} title={locale === "zh-CN" ? "下载" : "Download"}>
+                <Download className="size-3.5" />
+              </button>
+              <button type="button" onClick={handleCopyLink} title={locale === "zh-CN" ? "复制链接" : "Copy link"}>
+                <LinkIcon className="size-3.5" />
+              </button>
+            </span>
+          </span>
+          {lightbox && (
+            <ImageLightbox src={imgSrc} alt={imgAlt} onClose={() => setLightbox(false)} />
+          )}
+        </span>
+      );
+    },
+
+    // FileCard — intercept <div data-type="fileCard"> from preprocessMarkdown
+    div: ({ node, children, ...props }) => {
+      const dataType = node?.properties?.dataType as string | undefined;
+      if (dataType === "fileCard") {
+        const rawHref = (node?.properties?.dataHref as string) || "";
+        // Only allow http(s) URLs to prevent javascript: and other dangerous schemes.
+        const href = /^https?:\/\//i.test(rawHref) ? rawHref : "";
+        const filename = (node?.properties?.dataFilename as string) || "";
+        return (
+          <div className="my-1 flex items-center gap-2 rounded-md border border-border bg-muted/50 px-2.5 py-1 transition-colors hover:bg-muted">
+            <FileText className="size-4 shrink-0 text-muted-foreground" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm">{filename}</p>
+            </div>
+            {href && (
+              <button
+                type="button"
+                className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                onClick={() => window.open(href, "_blank", "noopener,noreferrer")}
+                title={locale === "zh-CN" ? "下载附件" : "Download attachment"}
+              >
+                <Download className="size-3.5" />
+              </button>
+            )}
+          </div>
+        );
+      }
+      return <div {...props}>{children}</div>;
+    },
 
   // Tables — wrap in tableWrapper div for border/radius/scroll (matches Tiptap)
   table: ({ children }) => (
@@ -257,8 +267,9 @@ const components: Partial<Components> = {
   },
 
   // Pre — pass through (CSS handles styling via .rich-text-editor pre)
-  pre: ({ children }) => <pre>{children}</pre>,
-};
+    pre: ({ children }) => <pre>{children}</pre>,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -270,7 +281,9 @@ interface ReadonlyContentProps {
 }
 
 export function ReadonlyContent({ content, className }: ReadonlyContentProps) {
+  const locale = getClientLocale();
   const processed = useMemo(() => preprocessMarkdown(content), [content]);
+  const components = useMemo(() => createComponents(locale), [locale]);
 
   return (
     <div className={cn("rich-text-editor readonly text-sm", className)}>

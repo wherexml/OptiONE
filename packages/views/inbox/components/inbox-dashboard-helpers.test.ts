@@ -196,14 +196,12 @@ describe("inbox dashboard helpers", () => {
   it("filters alert cards by business domain and risk level", () => {
     expect(
       getAlertItems(inboxItems, decisions, {
-        domain: "supply_chain",
         riskLevel: "all",
       }).map((item) => item.id),
-    ).toEqual(["inbox-1"]);
+    ).toEqual(["inbox-1", "inbox-2"]);
 
     expect(
       getAlertItems(inboxItems, decisions, {
-        domain: "all",
         riskLevel: "critical",
       }).map((item) => item.id),
     ).toEqual(["inbox-2"]);
@@ -211,7 +209,6 @@ describe("inbox dashboard helpers", () => {
 
   it("builds dropdown options from decision-linked alerts", () => {
     expect(getAlertFilterOptions(inboxItems, decisions)).toEqual({
-      domains: ["finance", "supply_chain"],
       riskLevels: ["critical", "high"],
     });
   });

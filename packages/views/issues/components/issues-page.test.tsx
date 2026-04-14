@@ -435,7 +435,7 @@ describe("IssuesPage (shared)", () => {
     expect(screen.getAllByText("In Progress").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows workspace breadcrumb with the decision center label", async () => {
+  it("shows workspace breadcrumb with the all tasks label", async () => {
     mockListIssues.mockImplementation((params: any) =>
       Promise.resolve(
         params?.open_only
@@ -446,7 +446,7 @@ describe("IssuesPage (shared)", () => {
 
     renderWithQuery(<IssuesPage />);
 
-    await screen.findByText("决策单中心");
+    await screen.findByText("所有任务");
     expect(screen.getByText("Test WS")).toBeInTheDocument();
   });
 
@@ -455,15 +455,15 @@ describe("IssuesPage (shared)", () => {
 
     renderWithQuery(<IssuesPage />);
 
-    await screen.findByText("暂无决策单");
-    expect(screen.getByText("创建决策单后即可开始协同。")).toBeInTheDocument();
+    await screen.findByText("暂无任务");
+    expect(screen.getByText("创建任务后即可开始协同。")).toBeInTheDocument();
   });
 
   it("shows scope tab buttons", async () => {
     renderWithQuery(<IssuesPage />);
 
-    await screen.findByText("All");
-    expect(screen.getByText("Members")).toBeInTheDocument();
-    expect(screen.getByText("Agents")).toBeInTheDocument();
+    await screen.findByText("全部");
+    expect(screen.getByText("成员")).toBeInTheDocument();
+    expect(screen.getByText("数字员工")).toBeInTheDocument();
   });
 });

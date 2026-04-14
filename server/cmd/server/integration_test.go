@@ -628,6 +628,43 @@ func TestAgentsThroughRouter(t *testing.T) {
 	}
 }
 
+func TestCreateAgentThroughRouter_DefaultsTriggers(t *testing.T) {
+	resp := authRequest(t, "GET", "/api/agents?workspace_id="+testWorkspaceID, nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("ListAgents: expected 200, got %d", resp.StatusCode)
+	}
+
+	var agents []map[string]any
+	readJSON(t, resp, &agents)
+	if len(agents) == 0 {
+		t.Fatal("expected at least 1 agent")
+	}
+
+	runtimeID := agents[0]["runtime_id"].(string)
+	resp = authRequest(t, "POST", "/api/agents?workspace_id="+testWorkspaceID, map[string]any{
+		"name":       "Router Create Agent Test",
+		"runtime_id": runtimeID,
+		"visibility": "private",
+	})
+	if resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		t.Fatalf("CreateAgent: expected 201, got %d: %s", resp.StatusCode, body)
+	}
+
+	var created map[string]any
+	readJSON(t, resp, &created)
+	if triggers, ok := created["triggers"].([]any); !ok || len(triggers) != 0 {
+		t.Fatalf("expected empty triggers array, got %#v", created["triggers"])
+	}
+
+	agentID := created["id"].(string)
+	t.Cleanup(func() {
+		resp := authRequest(t, "POST", "/api/agents/"+agentID+"/archive?workspace_id="+testWorkspaceID, nil)
+		resp.Body.Close()
+	})
+}
+
 // ---- Workspaces through full router ----
 
 func TestWorkspacesThroughRouter(t *testing.T) {

@@ -129,8 +129,8 @@ export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
       },
       {
         value: "agents" as const,
-        label: isZh ? "我的 Agent" : "My Agents",
-        description: isZh ? "查看分配给我的 Agent 的待办" : "Issues assigned to my agents",
+        label: isZh ? "我的数字员工" : "My Agents",
+        description: isZh ? "查看分配给我名下数字员工的任务" : "Issues assigned to my agents",
       },
     ],
     [isZh],

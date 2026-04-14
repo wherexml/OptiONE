@@ -45,7 +45,7 @@ export function ExecutionTab({ issueId }: { issueId: string }) {
       <Card>
         <CardHeader>
           <CardTitle>执行状态</CardTitle>
-          <CardDescription>执行态直接读取决策单主记录上的 `execution_status`。</CardDescription>
+          <CardDescription>执行态直接读取任务主记录上的 `execution_status`。</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3">
           <DecisionStatusBadge type="execution" value={executionStatus} />

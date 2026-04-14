@@ -78,7 +78,7 @@ describe("SearchCommand", () => {
 
     await waitFor(() => {
       // HighlightText splits text, so use a function matcher
-      expect(screen.getByText((_, el) => el?.textContent === "平台设置" && el?.tagName === "SPAN")).toBeInTheDocument();
+      expect(screen.getByText((_, el) => el?.textContent === "设置" && el?.tagName === "SPAN")).toBeInTheDocument();
     });
     expect(screen.queryByText("工作台")).not.toBeInTheDocument();
     expect(screen.queryByText("项目中心")).not.toBeInTheDocument();
@@ -92,7 +92,7 @@ describe("SearchCommand", () => {
     await user.type(input, "设置");
 
     const settingsItem = await screen.findByText(
-      (_, el) => el?.textContent === "平台设置" && el?.getAttribute("cmdk-item") !== null,
+      (_, el) => el?.textContent === "设置" && el?.getAttribute("cmdk-item") !== null,
     );
     await user.click(settingsItem);
 

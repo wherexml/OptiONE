@@ -31,8 +31,9 @@ interface InboxDashboardProps {
   selectedKey: string;
   onSelectItem: (item: InboxItem) => void;
   onArchiveItem: (id: string) => void;
-  onCreateDecision: () => void;
-  onOpenIssue: (issueId: string) => void;
+  onOpenDecision: (item: InboxItem) => void;
+  onConvertAlert: (item: InboxItem) => void;
+  onSelectIssue: (issueId: string) => void;
 }
 
 export function InboxDashboard({
@@ -45,11 +46,11 @@ export function InboxDashboard({
   selectedKey,
   onSelectItem,
   onArchiveItem,
-  onCreateDecision,
-  onOpenIssue,
+  onOpenDecision,
+  onConvertAlert,
+  onSelectIssue,
 }: InboxDashboardProps) {
   const [alertFilters, setAlertFilters] = useState<AlertFilters>({
-    domain: "all",
     riskLevel: "all",
   });
 
@@ -129,13 +130,15 @@ export function InboxDashboard({
         isLoading={inboxLoading || decisionsLoading}
         onFiltersChange={setAlertFilters}
         onSelectItem={onSelectItem}
-        onCreateDecision={onCreateDecision}
+        onOpenDecision={onOpenDecision}
+        onConvertAlert={onConvertAlert}
       />
 
       <InboxTodosSection
         issues={todoItems}
         isLoading={todosLoading}
-        onOpenIssue={onOpenIssue}
+        selectedIssueId={selectedKey}
+        onSelectIssue={onSelectIssue}
       />
 
       <section className="space-y-3">

@@ -177,7 +177,7 @@ export function IssueDetail({
   const id = issueId;
   const locale = getClientLocale();
   const isZh = locale === "zh-CN";
-  const resolvedBackLabel = backLabel ?? (locale === "zh-CN" ? "返回决策单中心" : "Back to Issues");
+  const resolvedBackLabel = backLabel ?? (locale === "zh-CN" ? "返回所有任务" : "Back to Issues");
   const router = useNavigation();
   const user = useAuthStore((s) => s.user);
   const workspace = useWorkspaceStore((s) => s.workspace);
@@ -445,7 +445,7 @@ export function IssueDetail({
                     }
                   />
                   <TooltipContent side="bottom">
-                    {isZh ? "上一条决策单" : "Previous issue"}
+                    {isZh ? "上一条任务" : "Previous issue"}
                   </TooltipContent>
                 </Tooltip>
                 <span className="text-xs text-muted-foreground tabular-nums px-0.5">
@@ -466,7 +466,7 @@ export function IssueDetail({
                     }
                   />
                   <TooltipContent side="bottom">
-                    {isZh ? "下一条决策单" : "Next issue"}
+                    {isZh ? "下一条任务" : "Next issue"}
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -672,7 +672,7 @@ export function IssueDetail({
                   onClick={() => setDeleteDialogOpen(true)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  {isZh ? "删除决策单" : "Delete issue"}
+                  {isZh ? "删除任务" : "Delete issue"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -704,10 +704,10 @@ export function IssueDetail({
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{isZh ? "删除决策单" : "Delete issue"}</AlertDialogTitle>
+                  <AlertDialogTitle>{isZh ? "删除任务" : "Delete issue"}</AlertDialogTitle>
                   <AlertDialogDescription>
                     {isZh
-                      ? "这会永久删除当前决策单及其全部评论，且无法恢复。"
+                      ? "这会永久删除当前任务及其全部评论，且无法恢复。"
                       : "This will permanently delete this issue and all its comments. This action cannot be undone."}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -759,7 +759,7 @@ export function IssueDetail({
                     <TitleEditor
                       key={`title-${id}`}
                       defaultValue={issue.title}
-                      placeholder={isZh ? "决策单标题" : "Issue title"}
+                      placeholder={isZh ? "任务标题" : "Issue title"}
                       className="w-full text-2xl font-bold leading-snug tracking-tight"
                       onBlur={(value) => {
                         const trimmed = value.trim();

@@ -21,7 +21,7 @@ describe("settings messages", () => {
   });
 
   it("translates settings keys and interpolates params", () => {
-    expect(settingsT("settings.title", "zh-CN")).toBe("平台设置");
+    expect(settingsT("settings.title", "zh-CN")).toBe("设置");
     expect(settingsT("settings.title", "en-US")).toBe("Settings");
     expect(
       settingsT("settings.members.titleWithCount", "zh-CN", { count: "3" }),

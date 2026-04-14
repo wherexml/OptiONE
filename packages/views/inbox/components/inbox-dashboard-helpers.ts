@@ -6,7 +6,6 @@ const TODO_DONE_STATUSES = new Set<IssueStatus>(["done", "cancelled"]);
 const INACTIVE_DECISION_PHASES = new Set(["closed", "identified"]);
 
 export interface AlertFilters {
-  domain: string;
   riskLevel: string;
 }
 
@@ -30,12 +29,11 @@ function matchesAlertFilter(
   decisionsById: Map<string, DecisionCase>,
   filters: AlertFilters,
 ): boolean {
-  if (!item.issue_id) return filters.domain === "all" && filters.riskLevel === "all";
+  if (!item.issue_id) return filters.riskLevel === "all";
 
   const decision = decisionsById.get(item.issue_id);
-  if (!decision) return filters.domain === "all" && filters.riskLevel === "all";
+  if (!decision) return filters.riskLevel === "all";
 
-  if (filters.domain !== "all" && decision.domain !== filters.domain) return false;
   if (filters.riskLevel !== "all" && decision.risk_level !== filters.riskLevel) return false;
 
   return true;
@@ -90,7 +88,6 @@ export function getAlertFilterOptions(inboxItems: InboxItem[], decisions: Decisi
   const linkedDecisions = decisions.filter((decision) => alertIssueIds.has(decision.id));
 
   return {
-    domains: Array.from(new Set(linkedDecisions.map((decision) => decision.domain))).sort(),
     riskLevels: Array.from(new Set(linkedDecisions.map((decision) => decision.risk_level))).sort(),
   };
 }

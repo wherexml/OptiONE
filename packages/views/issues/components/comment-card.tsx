@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { ChevronRight, Copy, Download, FileText, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { ChevronRight, Copy, Download, FileText, MoreHorizontal, Pencil, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@multica/ui/components/ui/card";
 import { Button } from "@multica/ui/components/ui/button";
@@ -48,10 +48,19 @@ interface CommentCardProps {
   currentUserId?: string;
   onReply: (parentId: string, content: string, attachmentIds?: string[]) => Promise<void>;
   onEdit: (commentId: string, content: string) => Promise<void>;
+  onResend: (commentId: string) => Promise<void>;
   onDelete: (commentId: string) => void;
   onToggleReaction: (commentId: string, emoji: string) => void;
   /** ID of the comment to highlight (flash animation). */
   highlightedCommentId?: string | null;
+}
+
+const AGENT_MENTION_RE = /\(mention:\/\/agent\/([^)]+)\)/g;
+
+function hasExplicitAgentMention(content?: string | null): boolean {
+  if (!content) return false;
+  AGENT_MENTION_RE.lastIndex = 0;
+  return AGENT_MENTION_RE.test(content);
 }
 
 // ---------------------------------------------------------------------------
@@ -138,6 +147,7 @@ function CommentRow({
   entry,
   currentUserId,
   onEdit,
+  onResend,
   onDelete,
   onToggleReaction,
 }: {
@@ -145,6 +155,7 @@ function CommentRow({
   entry: TimelineEntry;
   currentUserId?: string;
   onEdit: (commentId: string, content: string) => Promise<void>;
+  onResend: (commentId: string) => Promise<void>;
   onDelete: (commentId: string) => void;
   onToggleReaction: (commentId: string, emoji: string) => void;
 }) {
@@ -161,6 +172,7 @@ function CommentRow({
   const isOwn = entry.actor_type === "member" && entry.actor_id === currentUserId;
   const isTemp = entry.id.startsWith("temp-");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const canResend = useMemo(() => hasExplicitAgentMention(entry.content), [entry.content]);
 
   const startEdit = () => {
     cancelledRef.current = false;
@@ -223,7 +235,7 @@ function CommentRow({
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
-                <Button variant="ghost" size="icon-xs" className="text-muted-foreground">
+                <Button variant="ghost" size="icon-xs" className="text-muted-foreground" aria-label="Comment actions">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               }
@@ -236,6 +248,15 @@ function CommentRow({
                 <Copy className="h-3.5 w-3.5" />
                 Copy
               </DropdownMenuItem>
+              {canResend && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onResend(entry.id)}>
+                    <Send className="h-3.5 w-3.5" />
+                    Resend
+                  </DropdownMenuItem>
+                </>
+              )}
               {isOwn && (
                 <>
                   <DropdownMenuSeparator />
@@ -322,6 +343,7 @@ function CommentCard({
   currentUserId,
   onReply,
   onEdit,
+  onResend,
   onDelete,
   onToggleReaction,
   highlightedCommentId,
@@ -340,6 +362,7 @@ function CommentCard({
   const isOwn = entry.actor_type === "member" && entry.actor_id === currentUserId;
   const isTemp = entry.id.startsWith("temp-");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const canResend = useMemo(() => hasExplicitAgentMention(entry.content), [entry.content]);
 
   const startEdit = () => {
     cancelledRef.current = false;
@@ -434,7 +457,7 @@ function CommentCard({
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <Button variant="ghost" size="icon-xs" className="text-muted-foreground">
+                    <Button variant="ghost" size="icon-xs" className="text-muted-foreground" aria-label="Comment actions">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   }
@@ -447,6 +470,15 @@ function CommentCard({
                     <Copy className="h-3.5 w-3.5" />
                     Copy
                   </DropdownMenuItem>
+                  {canResend && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => onResend(entry.id)}>
+                        <Send className="h-3.5 w-3.5" />
+                        Resend
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   {isOwn && (
                     <>
                       <DropdownMenuSeparator />
@@ -534,6 +566,7 @@ function CommentCard({
                 entry={reply}
                 currentUserId={currentUserId}
                 onEdit={onEdit}
+                onResend={onResend}
                 onDelete={onDelete}
                 onToggleReaction={onToggleReaction}
               />
@@ -544,7 +577,7 @@ function CommentCard({
           <div className="border-t border-border/50 px-4 py-2.5">
             <ReplyInput
               issueId={issueId}
-              placeholder="Leave a reply..."
+              placeholder="写下回复..."
               size="sm"
               avatarType="member"
               avatarId={currentUserId ?? ""}

@@ -52,24 +52,6 @@ import { detectSkillDomains, getSkillDomainBadge } from "./skill-domain-helpers"
 
 const GENERIC_DOMAIN = "generic";
 
-const RECOMMENDED_TEMPLATES = [
-  {
-    name: "供应商评估模板",
-    subtitle: "Supplier Evaluation",
-    description: "用于梳理供应商表现、交付能力与合作风险。",
-  },
-  {
-    name: "库存优化模板",
-    subtitle: "Inventory Optimization",
-    description: "用于分析库存周转、安全库存与补货策略。",
-  },
-  {
-    name: "需求预测模板",
-    subtitle: "Demand Forecasting",
-    description: "用于整理需求信号、预测假设与波动趋势。",
-  },
-] as const;
-
 function getDomainBadgeClassName(color: string) {
   switch (color) {
     case "blue":
@@ -673,31 +655,6 @@ function SkillDetail({
                       className="text-xs"
                     />
                   ))}
-                </div>
-
-                <div className="space-y-3 border-t pt-4">
-                  <div>
-                    <h3 className="text-sm font-medium">推荐模板</h3>
-                    <p className="text-xs text-muted-foreground">
-                      以下模板仅供参考展示，当前不会自动加载到技能包中。
-                    </p>
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-3">
-                    {RECOMMENDED_TEMPLATES.map((template) => (
-                      <div
-                        key={template.name}
-                        className="rounded-lg border bg-muted/20 px-4 py-3"
-                      >
-                        <div className="text-sm font-medium">{template.name}</div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {template.subtitle}
-                        </div>
-                        <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                          {template.description}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               </CardContent>
             </Card>

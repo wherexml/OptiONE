@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getAgentDomainMeta, getAgentStatusLabel } from "./agent-list-item";
+import { getAgentDomainMeta, getAgentStatusLabel } from "./agent-meta";
 
 describe("getAgentDomainMeta", () => {
   it("returns a procurement badge for procurement keywords", () => {
@@ -14,21 +14,24 @@ describe("getAgentDomainMeta", () => {
     });
   });
 
-  it("returns a control tower badge for control tower keywords", () => {
-    expect(getAgentDomainMeta("负责控制塔告警和异常分流")).toMatchObject({
-      label: "控制塔",
+  it("returns an exception-handling badge for alert keywords", () => {
+    expect(getAgentDomainMeta("负责异常处理、告警和异常分流")).toMatchObject({
+      label: "异常处理",
+      avatarClassName: "bg-info/10 text-info",
     });
   });
 
   it("returns a governance badge for governance keywords", () => {
     expect(getAgentDomainMeta("负责审批边界和治理规则")).toMatchObject({
       label: "治理",
+      avatarClassName: "bg-destructive/10 text-destructive",
     });
   });
 
   it("falls back to the general badge when no domain keyword matches", () => {
     expect(getAgentDomainMeta("Handles general task routing")).toMatchObject({
       label: "通用",
+      avatarClassName: "bg-muted text-muted-foreground",
     });
   });
 });

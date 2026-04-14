@@ -74,13 +74,11 @@ describe("LoginPage", () => {
   it("renders the password login form", () => {
     render(<LoginPage />);
 
-    expect(screen.getByText("Sign in to OptiONE")).toBeInTheDocument();
-    expect(
-      screen.getByText("Enter your email and password to continue"),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText("Email")).toBeInTheDocument();
-    expect(screen.getByLabelText("Password")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
+    expect(screen.getByText("OptiONE Platform")).toBeInTheDocument();
+    expect(screen.getByText("请输入邮箱和密码以继续")).toBeInTheDocument();
+    expect(screen.getByLabelText("邮箱")).toBeInTheDocument();
+    expect(screen.getByLabelText("密码")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "登录" })).toBeInTheDocument();
   });
 
   it("stores the session, hydrates workspace, updates auth state, and navigates after login", async () => {
@@ -115,9 +113,9 @@ describe("LoginPage", () => {
     const user = userEvent.setup();
     render(<LoginPage />);
 
-    await user.type(screen.getByLabelText("Email"), "admin@local");
-    await user.type(screen.getByLabelText("Password"), "admin123");
-    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    await user.type(screen.getByLabelText("邮箱"), "admin@local");
+    await user.type(screen.getByLabelText("密码"), "admin123");
+    await user.click(screen.getByRole("button", { name: "登录" }));
 
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith("admin@local", "admin123");

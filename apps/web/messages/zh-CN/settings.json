@@ -1,5 +1,5 @@
 {
-  "title": "平台设置",
+  "title": "设置",
   "groups": {
     "account": "我的账户",
     "workspace": "业务空间"
@@ -133,7 +133,7 @@
       "button": "删除业务空间",
       "loading": "删除中...",
       "dialogTitle": "删除业务空间",
-      "dialogDescription": "删除 {name}？此操作不可撤销。所有决策单、专家 Agent 和数据都会被永久删除。",
+      "dialogDescription": "删除 {name}？此操作不可撤销。所有任务、数字员工和数据都会被永久删除。",
       "toastFailed": "删除业务空间失败"
     }
   },
@@ -176,13 +176,13 @@
       },
       "member": {
         "label": "成员",
-        "description": "可创建并处理决策单"
+        "description": "可创建并处理任务"
       }
     }
   },
   "repositories": {
     "title": "代码仓库",
-    "description": "与此业务空间关联的 GitHub 代码仓库。专家 Agent 会使用这些仓库来克隆代码并开展工作。",
+    "description": "与此业务空间关联的 GitHub 代码仓库。数字员工会使用这些仓库来克隆代码并开展工作。",
     "fields": {
       "urlPlaceholder": "https://github.com/org/repo",
       "descriptionPlaceholder": "描述（例如：Go 后端 + Next.js 前端）"

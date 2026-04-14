@@ -3,17 +3,17 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@multica/ui/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@multica/ui/components/ui/avatar";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@multica/ui/components/ui/collapsible";
-import { Bot, Loader2, ChevronRight, ChevronDown, Brain, AlertCircle } from "lucide-react";
+import { Loader2, ChevronRight, ChevronDown, Brain, AlertCircle } from "lucide-react";
 import { api } from "@multica/core/api";
 import { Markdown } from "@multica/views/common/markdown";
 import type { ChatMessage, Agent, TaskMessagePayload } from "@multica/core/types";
 import type { ChatTimelineItem } from "@multica/core/chat";
+import { AgentAvatar } from "../../common/agent-avatar";
 
 // ─── Public component ────────────────────────────────────────────────────
 
@@ -46,7 +46,7 @@ export function ChatMessageList({
       {/* Live streaming timeline */}
       {hasTimeline && (
         <div className="flex items-start gap-3">
-          <AgentAvatar agent={agent} />
+          <ChatAgentAvatar agent={agent} />
           <div className="min-w-0 flex-1 space-y-1.5">
             <TimelineView items={timelineItems} />
           </div>
@@ -54,7 +54,7 @@ export function ChatMessageList({
       )}
       {isWaiting && !hasTimeline && (
         <div className="flex items-start gap-3">
-          <AgentAvatar agent={agent} />
+          <ChatAgentAvatar agent={agent} />
           <div className="flex items-center pt-1">
             <Loader2 className="size-4 animate-spin text-muted-foreground" />
           </div>
@@ -117,7 +117,7 @@ function AssistantMessage({
 
   return (
     <div className="flex items-start gap-3">
-      <AgentAvatar agent={agent} />
+      <ChatAgentAvatar agent={agent} />
       <div className="min-w-0 flex-1 space-y-1.5">
         {timeline.length > 0 ? (
           <TimelineView items={timeline} />
@@ -356,13 +356,10 @@ function ErrorRow({ item }: { item: ChatTimelineItem }) {
 
 // ─── Shared ──────────────────────────────────────────────────────────────
 
-function AgentAvatar({ agent }: { agent: Agent | null }) {
-  return (
-    <Avatar className="size-6 shrink-0 mt-0.5">
-      {agent?.avatar_url && <AvatarImage src={agent.avatar_url} />}
-      <AvatarFallback className="bg-purple-100 text-purple-700">
-        <Bot className="size-3" />
-      </AvatarFallback>
-    </Avatar>
-  );
+function ChatAgentAvatar({ agent }: { agent: Agent | null }) {
+  if (!agent) {
+    return null;
+  }
+
+  return <AgentAvatar agent={agent} size={24} className="mt-0.5" />;
 }

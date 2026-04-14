@@ -92,6 +92,25 @@ Core workflow: `open <url>` → `snapshot -i` → `click/fill` → 重新 snapsh
 
 ---
 
+## 开发环境端口偏好
+
+**本地开发环境使用 Docker + OrbStack 部署，端口映射如下：**
+
+| 服务 | 容器端口 | 宿主机端口 | 访问地址 |
+| --- | --- | --- | --- |
+| 前端 (Next.js) | 3000 | **22202** | http://localhost:22202 |
+| 后端 (Go) | 8080 | **8080** | http://localhost:8080 |
+| PostgreSQL | 5432 | **22200** | postgres://localhost:22200 |
+
+**Docker 容器名称：**
+- `multica-frontend-1` — 前端
+- `multica-backend-1` — 后端
+- `multica-postgres-1` — 数据库
+
+**重要：** 测试登录或 API 时，使用 `http://localhost:22202` 访问前端，`http://localhost:8080` 直接访问后端。前端通过 Next.js rewrites 代理 `/auth/*` 和 `/api/*` 到后端容器。
+
+---
+
 ## 常用命令
 
 ```bash

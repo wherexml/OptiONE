@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Calendar, Users } from "lucide-react";
 import { useAuthStore } from "@multica/core/auth";
 import { useWorkspaceId } from "@multica/core/hooks";
+import { getClientLocale } from "@multica/core/platform";
 import type { IssuePriority, IssueStatus, TimelineEntry } from "@multica/core/types";
 import { timeAgo } from "@multica/core/utils";
 import { memberListOptions, agentListOptions } from "@multica/core/workspace/queries";
@@ -15,7 +16,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@multica/ui/components/ui/popover";
 import { Skeleton } from "@multica/ui/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@multica/ui/components/ui/tooltip";
-import { PRIORITY_CONFIG, STATUS_CONFIG } from "@multica/core/issues/config";
+import { PRIORITY_CONFIG, STATUS_CONFIG, getIssuePriorityLabel, getIssueStatusLabel } from "@multica/core/issues/config";
 import { useIssueSubscribers } from "../../hooks/use-issue-subscribers";
 import { useIssueTimeline } from "../../hooks/use-issue-timeline";
 import { ActorAvatar } from "../../../common/actor-avatar";
@@ -25,50 +26,63 @@ import { CommentInput } from "../comment-input";
 import { PriorityIcon } from "../priority-icon";
 import { StatusIcon } from "../status-icon";
 
-function statusLabel(status: string): string {
-  return STATUS_CONFIG[status as IssueStatus]?.label ?? status;
+function statusLabel(status: string, locale: string): string {
+  if (!(status in STATUS_CONFIG)) return status;
+  return getIssueStatusLabel(status as IssueStatus, locale);
 }
 
-function priorityLabel(priority: string): string {
-  return PRIORITY_CONFIG[priority as IssuePriority]?.label ?? priority;
+function priorityLabel(priority: string, locale: string): string {
+  if (!(priority in PRIORITY_CONFIG)) return priority;
+  return getIssuePriorityLabel(priority as IssuePriority, locale);
 }
 
 function formatActivity(
   entry: TimelineEntry,
+  locale: string,
   resolveActorName?: (type: string, id: string) => string,
 ): string {
   const details = (entry.details ?? {}) as Record<string, string>;
+  const isZh = locale === "zh-CN";
 
   switch (entry.action) {
     case "created":
-      return "created this issue";
+      return isZh ? "创建了这个任务" : "created this issue";
     case "status_changed":
-      return `changed status from ${statusLabel(details.from ?? "?")} to ${statusLabel(details.to ?? "?")}`;
+      return isZh
+        ? `将状态从 ${statusLabel(details.from ?? "?", locale)} 改为 ${statusLabel(details.to ?? "?", locale)}`
+        : `changed status from ${statusLabel(details.from ?? "?", locale)} to ${statusLabel(details.to ?? "?", locale)}`;
     case "priority_changed":
-      return `changed priority from ${priorityLabel(details.from ?? "?")} to ${priorityLabel(details.to ?? "?")}`;
+      return isZh
+        ? `将优先级从 ${priorityLabel(details.from ?? "?", locale)} 改为 ${priorityLabel(details.to ?? "?", locale)}`
+        : `changed priority from ${priorityLabel(details.from ?? "?", locale)} to ${priorityLabel(details.to ?? "?", locale)}`;
     case "assignee_changed": {
       const isSelfAssign = details.to_type === entry.actor_type && details.to_id === entry.actor_id;
-      if (isSelfAssign) return "self-assigned this issue";
+      if (isSelfAssign) return isZh ? "将自己设为负责人" : "self-assigned this issue";
       const toName = details.to_id && details.to_type && resolveActorName
         ? resolveActorName(details.to_type, details.to_id)
         : null;
-      if (toName) return `assigned to ${toName}`;
-      if (details.from_id && !details.to_id) return "removed assignee";
-      return "changed assignee";
+      if (toName) return isZh ? `将负责人改为 ${toName}` : `assigned to ${toName}`;
+      if (details.from_id && !details.to_id) return isZh ? "移除了负责人" : "removed assignee";
+      return isZh ? "更新了负责人" : "changed assignee";
     }
     case "due_date_changed": {
-      if (!details.to) return "removed due date";
-      const formatted = new Date(details.to).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      return `set due date to ${formatted}`;
+      if (!details.to) return isZh ? "移除了截止日期" : "removed due date";
+      const formatted = new Date(details.to).toLocaleDateString(
+        locale,
+        isZh ? { year: "numeric", month: "numeric", day: "numeric" } : { month: "short", day: "numeric" },
+      );
+      return isZh ? `将截止日期设为 ${formatted}` : `set due date to ${formatted}`;
     }
     case "title_changed":
-      return `renamed this issue from "${details.from ?? "?"}" to "${details.to ?? "?"}"`;
+      return isZh
+        ? `将标题从“${details.from ?? "?"}”改为“${details.to ?? "?"}”`
+        : `renamed this issue from "${details.from ?? "?"}" to "${details.to ?? "?"}"`;
     case "description_updated":
-      return "updated the description";
+      return isZh ? "更新了描述" : "updated the description";
     case "task_completed":
-      return "completed the task";
+      return "已完成任务";
     case "task_failed":
-      return "task failed";
+      return isZh ? "任务失败" : "task failed";
     default:
       return entry.action ?? "";
   }
@@ -85,6 +99,8 @@ export function CollaborationTab({
   highlightCommentId?: string;
   standalone?: boolean;
 }) {
+  const locale = getClientLocale();
+  const isZh = locale === "zh-CN";
   const user = useAuthStore((state) => state.user);
   const wsId = useWorkspaceId();
   const { getActorName } = useActorName();
@@ -99,6 +115,7 @@ export function CollaborationTab({
     submitComment,
     submitReply,
     editComment,
+    resendComment,
     deleteComment,
     toggleReaction: handleToggleReaction,
   } = useIssueTimeline(issueId, user?.id);
@@ -154,7 +171,7 @@ export function CollaborationTab({
                 onClick={handleToggleSubscribe}
                 className="text-xs text-muted-foreground transition-colors hover:text-foreground"
               >
-                {isSubscribed ? "Unsubscribe" : "Subscribe"}
+                {isSubscribed ? (isZh ? "取消订阅" : "Unsubscribe") : (isZh ? "订阅" : "Subscribe")}
               </button>
               <Popover>
                 <PopoverTrigger className="cursor-pointer transition-opacity hover:opacity-80">
@@ -180,11 +197,11 @@ export function CollaborationTab({
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-64 p-0">
                   <Command>
-                    <CommandInput placeholder="Change subscribers..." />
+                    <CommandInput placeholder={isZh ? "更改订阅者..." : "Change subscribers..."} />
                     <CommandList className="max-h-64">
-                      <CommandEmpty>No results found</CommandEmpty>
+                      <CommandEmpty>{isZh ? "未找到结果" : "No results found"}</CommandEmpty>
                       {members.length > 0 ? (
-                        <CommandGroup heading="Members">
+                        <CommandGroup heading={isZh ? "成员" : "Members"}>
                           {members
                             .filter((member, index, arr) => arr.findIndex((candidate) => candidate.user_id === member.user_id) === index)
                             .map((member) => {
@@ -208,7 +225,7 @@ export function CollaborationTab({
                         </CommandGroup>
                       ) : null}
                       {agents.filter((agent) => !agent.archived_at).length > 0 ? (
-                        <CommandGroup heading="Agents">
+                        <CommandGroup heading={isZh ? "数字员工" : "Agents"}>
                           {agents
                             .filter((agent) => !agent.archived_at)
                             .map((agent) => {
@@ -225,7 +242,7 @@ export function CollaborationTab({
                                 >
                                   <Checkbox checked={checked} className="pointer-events-none" />
                                   <ActorAvatar actorType="agent" actorId={agent.id} size={22} />
-                                  <span className="flex-1 truncate">{agent.name}</span>
+                                  <span className="flex-1 truncate">{getActorName("agent", agent.id)}</span>
                                 </CommandItem>
                               );
                             })}
@@ -320,6 +337,7 @@ export function CollaborationTab({
                     currentUserId={user?.id}
                     onReply={submitReply}
                     onEdit={editComment}
+                    onResend={resendComment}
                     onDelete={deleteComment}
                     onToggleReaction={handleToggleReaction}
                     highlightedCommentId={highlightedId}
@@ -354,7 +372,7 @@ export function CollaborationTab({
                       </div>
                       <div className="flex min-w-0 flex-1 items-center gap-1">
                         <span className="shrink-0 font-medium">{getActorName(entry.actor_type, entry.actor_id)}</span>
-                        <span className="truncate">{formatActivity(entry, getActorName)}</span>
+                        <span className="truncate">{formatActivity(entry, locale, getActorName)}</span>
                         <Tooltip>
                           <TooltipTrigger
                             render={(
@@ -363,9 +381,7 @@ export function CollaborationTab({
                               </span>
                             )}
                           />
-                          <TooltipContent side="top">
-                            {new Date(entry.created_at).toLocaleString()}
-                          </TooltipContent>
+                          <TooltipContent side="top">{new Date(entry.created_at).toLocaleString(locale)}</TooltipContent>
                         </Tooltip>
                       </div>
                     </div>

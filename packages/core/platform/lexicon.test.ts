@@ -48,17 +48,17 @@ const expectedEnUs = {
 const expectedZhCn = {
   workspace: "业务空间",
   project: "专题",
-  issue: "决策单",
-  agent: "专家 Agent",
+  issue: "任务",
+  agent: "数字员工",
   runtime: "执行环境",
   skill: "技能包",
   comment: "协同记录",
   runMessages: "执行轨迹",
   inbox: "工作台",
   myIssues: "我的待办",
-  issuesCenter: "决策单中心",
+  issuesCenter: "所有任务",
   projectsCenter: "项目中心",
-  settings: "平台设置",
+  settings: "设置",
   decision: "决策",
   phase: "阶段",
   riskLevel: "风险等级",
@@ -109,6 +109,8 @@ describe("lexicon", () => {
     expect(t("workspace")).toBe("业务空间");
     expect(t("workspace", "en")).toBe("Workspace");
     expect(t("action", "en-US")).toBe("Action");
+    expect(t("issue")).toBe("任务");
+    expect(t("issuesCenter")).toBe("所有任务");
     expect(t("audit", "unknown")).toBe("审计");
   });
 

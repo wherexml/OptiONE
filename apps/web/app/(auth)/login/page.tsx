@@ -6,6 +6,7 @@ import { useAuthStore } from "@multica/core/auth";
 import { useWorkspaceStore } from "@multica/core/workspace";
 import { api } from "@multica/core/api";
 import { setLoggedInCookie } from "@/features/auth/auth-cookie";
+import { localizeAuthError } from "@/features/auth/auth-error";
 import {
   Card,
   CardHeader,
@@ -51,11 +52,11 @@ function LoginPageContent() {
     const password = passwordRef.current?.value ?? "";
 
     if (!email) {
-      setError("Email is required");
+      setError("请输入邮箱");
       return;
     }
     if (!password) {
-      setError("Password is required");
+      setError("请输入密码");
       return;
     }
 
@@ -71,9 +72,7 @@ function LoginPageContent() {
       hydrateWorkspace(wsList, lastWorkspaceId);
       router.push(searchParams.get("next") || "/issues");
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Invalid email or password"
-      );
+      setError(localizeAuthError(err, "邮箱或密码不正确"));
       setSubmitting(false);
     }
   };
@@ -82,35 +81,33 @@ function LoginPageContent() {
     <div className="flex min-h-svh items-center justify-center">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Sign in to OptiONE</CardTitle>
-          <CardDescription>
-            Enter your email and password to continue
-          </CardDescription>
+          <CardTitle className="text-2xl">OptiONE Platform</CardTitle>
+          <CardDescription>请输入邮箱和密码以继续</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="login-email">Email</Label>
+              <Label htmlFor="login-email">邮箱</Label>
               <Input
                 ref={emailRef}
                 id="login-email"
                 name="email"
                 type="email"
                 autoComplete="email"
-                placeholder="you@example.com"
+                placeholder="请输入邮箱"
                 autoFocus
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="login-password">Password</Label>
+              <Label htmlFor="login-password">密码</Label>
               <Input
                 ref={passwordRef}
                 id="login-password"
                 name="password"
                 type="password"
                 autoComplete="current-password"
-                placeholder="••••••••"
+                placeholder="请输入密码"
                 required
               />
             </div>
@@ -123,15 +120,18 @@ function LoginPageContent() {
               size="lg"
               disabled={submitting}
             >
-              {submitting ? "Signing in..." : "Sign in"}
+              {submitting ? "登录中..." : "登录"}
             </Button>
           </form>
         </CardContent>
         <CardFooter>
           <p className="text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-primary underline-offset-4 hover:underline">
-              Sign up
+            还没有账号？{" "}
+            <Link
+              href="/register"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              注册
             </Link>
           </p>
         </CardFooter>

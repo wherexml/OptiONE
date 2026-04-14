@@ -4,6 +4,19 @@ export type AgentRuntimeMode = "local" | "cloud";
 
 export type AgentVisibility = "workspace" | "private";
 
+export type AgentTriggerType = "on_assign" | "on_comment" | "on_mention" | "scheduled";
+
+export interface AgentTrigger {
+  id: string;
+  type: AgentTriggerType;
+  enabled: boolean;
+  // For scheduled triggers
+  cron?: string;
+  timezone?: string;
+  prompt?: string;
+  created_at: string;
+}
+
 export interface RuntimeDevice {
   id: string;
   workspace_id: string;
@@ -52,6 +65,7 @@ export interface Agent {
   max_concurrent_tasks: number;
   owner_id: string | null;
   skills: Skill[];
+  triggers: AgentTrigger[];
   created_at: string;
   updated_at: string;
   archived_at: string | null;
@@ -79,6 +93,7 @@ export interface UpdateAgentRequest {
   visibility?: AgentVisibility;
   status?: AgentStatus;
   max_concurrent_tasks?: number;
+  triggers?: AgentTrigger[];
 }
 
 // Skills

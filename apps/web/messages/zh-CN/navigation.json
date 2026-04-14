@@ -1,10 +1,10 @@
 {
   "inbox": "工作台",
   "myIssues": "我的待办",
-  "issuesCenter": "决策单中心",
+  "issuesCenter": "所有任务",
   "projectsCenter": "项目中心",
-  "agent": "专家 Agent",
+  "agent": "数字员工",
   "runtime": "执行环境",
   "skill": "技能包",
-  "settings": "平台设置"
+  "settings": "设置"
 }
