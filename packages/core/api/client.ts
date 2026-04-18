@@ -53,6 +53,17 @@ import type {
   CreatePinRequest,
   PinnedItemType,
   ReorderPinsRequest,
+  Source,
+  SourceType,
+  CreateSourceRequest,
+  UpdateSourceRequest,
+  ListSourcesResponse,
+  TestSourceResponse,
+  ListSourceToolsResponse,
+  SourceAuthState,
+  SourceRun,
+  SourceToolCallRequest,
+  UpdateSourceAuthRequest,
 } from "../types";
 import { type Logger, noopLogger } from "../logger";
 
@@ -64,6 +75,21 @@ export interface ApiClientOptions {
 export interface LoginResponse {
   token: string;
   user: User;
+}
+
+function createRequestId(): string {
+  const cryptoApi = globalThis.crypto;
+  if (typeof cryptoApi?.randomUUID === "function") {
+    return cryptoApi.randomUUID().slice(0, 8);
+  }
+
+  if (typeof cryptoApi?.getRandomValues === "function") {
+    const bytes = new Uint8Array(4);
+    cryptoApi.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  return Math.random().toString(36).slice(2, 10).padEnd(8, "0");
 }
 
 export class ApiClient {
@@ -111,7 +137,7 @@ export class ApiClient {
   }
 
   private async fetch<T>(path: string, init?: RequestInit): Promise<T> {
-    const rid = crypto.randomUUID().slice(0, 8);
+    const rid = createRequestId();
     const start = Date.now();
     const method = init?.method ?? "GET";
 
@@ -470,6 +496,70 @@ export class ApiClient {
     return this.fetch(`/api/runtimes/${runtimeId}/update/${updateId}`);
   }
 
+  async listSources(params?: { workspace_id?: string; source_type?: SourceType }): Promise<ListSourcesResponse> {
+    const search = new URLSearchParams();
+    const wsId = params?.workspace_id ?? this.workspaceId;
+    if (wsId) search.set("workspace_id", wsId);
+    if (params?.source_type) search.set("source_type", params.source_type);
+    return this.fetch(`/api/sources?${search}`);
+  }
+
+  async getSource(sourceId: string): Promise<Source> {
+    return this.fetch(`/api/sources/${sourceId}`);
+  }
+
+  async createSource(data: CreateSourceRequest): Promise<Source> {
+    return this.fetch("/api/sources", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateSource(sourceId: string, data: UpdateSourceRequest): Promise<Source> {
+    return this.fetch(`/api/sources/${sourceId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteSource(sourceId: string): Promise<void> {
+    await this.fetch(`/api/sources/${sourceId}`, { method: "DELETE" });
+  }
+
+  async testSource(sourceId: string): Promise<TestSourceResponse> {
+    return this.fetch(`/api/sources/${sourceId}/test`, { method: "POST" });
+  }
+
+  async listSourceTools(sourceId: string): Promise<ListSourceToolsResponse> {
+    return this.fetch(`/api/sources/${sourceId}/tools`);
+  }
+
+  async refreshSourceTools(sourceId: string): Promise<SourceRun> {
+    return this.fetch(`/api/sources/${sourceId}/tools/refresh`, { method: "POST" });
+  }
+
+  async callSourceTool(sourceId: string, toolName: string, data: SourceToolCallRequest): Promise<SourceRun> {
+    return this.fetch(`/api/sources/${sourceId}/tools/${encodeURIComponent(toolName)}/call`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateSourceAuth(sourceId: string, data: UpdateSourceAuthRequest): Promise<SourceAuthState> {
+    return this.fetch(`/api/sources/${sourceId}/auth`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async clearSourceAuth(sourceId: string): Promise<SourceAuthState> {
+    return this.fetch(`/api/sources/${sourceId}/auth`, { method: "DELETE" });
+  }
+
+  async getSourceRun(sourceId: string, runId: string): Promise<SourceRun> {
+    return this.fetch(`/api/sources/${sourceId}/runs/${runId}`);
+  }
+
   async listAgentTasks(agentId: string): Promise<AgentTask[]> {
     return this.fetch(`/api/agents/${agentId}/tasks`);
   }
@@ -657,7 +747,7 @@ export class ApiClient {
     if (opts?.issueId) formData.append("issue_id", opts.issueId);
     if (opts?.commentId) formData.append("comment_id", opts.commentId);
 
-    const rid = crypto.randomUUID().slice(0, 8);
+    const rid = createRequestId();
     const start = Date.now();
     this.logger.info("→ POST /api/upload-file", { rid });
 
